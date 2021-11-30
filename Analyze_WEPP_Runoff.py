@@ -111,7 +111,7 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
             cli_crop = cli_data[cli_data['year'].isin(crop_yrs)]
 
             # Get mean of monthly data 
-            cli_avg = (cli_crop.groupby('Month')[['Pr']].sum() / len(crop_yrs))
+            cli_avg = (cli_crop.groupby('Month')[['Pr']].sum()) / len(crop_yrs)
             pr_e_df = cli_crop.groupby('Month').agg(lambda x: x.ne(0).sum()) / len(crop_yrs)
             cli_avg['Pr_e'] = pr_e_df['Pr']
 
@@ -170,8 +170,8 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
         crop_obs_yrs = years in which crop of interest is present
         '''
         crop_df = obs_df[obs_df['Year'].isin(crop_obs_yrs)]
-        crop_RO = crop_df.groupby('Month')['RO (in)'].sum() * 25.4
-        crop_Events = crop_df.groupby('Month')['RO (in)'].count()
+        crop_RO = (crop_df.groupby('Month')['RO (in)'].sum() * 25.4) / len(crop_obs_yrs)
+        crop_Events = (crop_df.groupby('Month')['RO (in)'].count()) / len(crop_obs_yrs)
         
         months = [4,5,6,7,8,9,10]
         crop_out = pd.DataFrame({'Total RO (mm)':crop_RO, 'Total RO Events':crop_Events},index = months).fillna(0)
@@ -180,7 +180,8 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
     crop1_obs = sep_obs_crops(crop1_obs_yrs)
     crop2_obs = sep_obs_crops(crop2_obs_yrs)
 
-    
+    print(crop1_obs)
+    print(crop2_obs)
     
     ##### Compare modeled and observed data #####
     def comp_mod_obs_RO(WEPP_crop_lst, obs_df):
@@ -218,7 +219,8 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
             mod_ID_lst.append(mod)
 
         # Create a dataframe out of the RMSE and R2 values 
-        val_values = pd.DataFrame(data = {'Model':mod_ID_lst, 'RMSE_RO':rmse_RO_lst, 'R2_RO':R2_RO_lst,                                          'RMSE_RO_e':rmse_RO_e_lst, 'R2_RO_e':R2_RO_e_lst})
+        val_values = pd.DataFrame(data = {'Model':mod_ID_lst, 'RMSE_RO':rmse_RO_lst, 'R2_RO':R2_RO_lst,
+                                          'RMSE_RO_e':rmse_RO_e_lst, 'R2_RO_e':R2_RO_e_lst})
 
         return val_values
     
@@ -230,19 +232,14 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
 add_years = [0,6,12,18,24,30,36,42,48,54] 
 start_crop1_yrs = [1,2]
 start_crop2_yrs = [3,4,5,6]
-crop1_obs_yrs = ['2011','2012']
-crop2_obs_yrs = ['2013','2015']
+crop1_obs_yrs = ['2011', '2012']
+crop2_obs_yrs = ['2013', '2014', '2015', '2016']
 scen_dir = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1_DEP\\Runs\\DEP_DF_10K\\'
-mod_labels = ['L1']
+mod_labels = ['L1','L2','L3','L4','L5','L6',\
+              'B1','B2','B3','B4','B5','B6']
 excel_parent_path = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\'
 obs_path = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1_DEP\\obs_data\\DF_Obs_Cal.txt'
 
 
-analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2_obs_yrs,           scen_dir, mod_labels, excel_parent_path, obs_path, '10K')
-
-
-# In[ ]:
-
-
-
-
+analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2_obs_yrs,
+           scen_dir, mod_labels, excel_parent_path, obs_path, '10K')
