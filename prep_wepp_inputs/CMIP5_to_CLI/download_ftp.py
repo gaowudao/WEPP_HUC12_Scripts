@@ -4,7 +4,7 @@
 # In[6]:
 
 
-def run_ftp_download(ID, output_path):
+def extract_netcdf(ID, output_path, HUC12_name):
     """
     Function for downloading subset request results submitted through the 
     Green Data Oasis: Downscaled Climate and Hydrology Projections website 
@@ -44,7 +44,7 @@ def run_ftp_download(ID, output_path):
     """
 
     import ftplib
-    import os
+    import os, shutil
     import time
     import sys
     import getopt
@@ -92,6 +92,7 @@ def run_ftp_download(ID, output_path):
 
         # Create full file path to ftp
         s_input_path = _build_ftp_path(s_job_id)
+
 
         # Login to the FTP site
         s_server_address = "gdo-dcp.ucllnl.org"
@@ -239,23 +240,27 @@ def run_ftp_download(ID, output_path):
         return(pth)
 
 
-    if __name__ == "__main__":
+    download_dcp_subset_results(ID, output_path)
+    
+    s_input_path = _build_ftp_path(ID)
+    if 'BCCA' in output_path:
+        netcdf_path = str(output_path + s_input_path + '/bcca5/')
+        new_name = str(HUC12_name + '_B')
+        print(netcdf_path)
+    if 'LOCA' in output_path:
+        netcdf_path = str(output_path + s_input_path + '/loca5/')
+        new_name = str(HUC12_name + '_L')
+        print(netcdf_path)
 
-        # Parse inputs
-        args = sys.argv[1:]
-        if len(args) == 1:
-            s_job_id = args[0]
-            s_local_destination = None
-        elif len(args) == 2:
-            s_job_id = args[0]
-            s_local_destination = args[1]
-        else:
-            sys.stderr.write('Expected 1 or 2 arguments, received %i' % len(args))
-            sys.exit(1)
+    #loop through files in netcdf_path
+    for file in os.listdir(netcdf_path):
 
-        #############################################################################
-        # Call the download processor
-        download_dcp_subset_results(ID, output_path)
-        
-run_ftp_download('202108231014Nl5l_n_Qc3tYr', 'C:\\Users\\Garner\\Soil_Erosion_Project\\GO1_field_test\\climate_files\\LOCA_obs')
+        #select extraction files with netCDF data
+        if file.startswith('Extraction_'):
 
+            #set path to file and to new directory
+            netcdf_file = str(netcdf_path + file)
+            new_path = str(output_path + new_name + file[10:])
+
+            #move extraction files to new path
+            shutil.move(netcdf_file, new_path)

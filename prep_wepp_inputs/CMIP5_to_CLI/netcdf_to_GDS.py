@@ -3,12 +3,6 @@
 
 # In[3]:
 
-
-import pandas as pd
-import numpy as np
-import xarray as xr
-import os
-
 def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_type, GDS_out_path):
     '''
     Extracts netcdf climate data from .nc files to workable dataframes 
@@ -21,10 +15,19 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
     proj_num = number of projections/models in netcdf
     '''
     
+    import pandas as pd
+    import numpy as np
+    import xarray as xr
+    import os
+    
     def netCDF_to_dic():
         '''
         Extracts netCDF data to dictionary of dataframes, creates necessary edits
         and adjustments to dataframes, and then exports to dataframes to text files
+        
+        Each netcdf file represents one climate variable and each of the files are
+        multi-varible (i.e. they include time, location, and model projection for each
+        data point)
         '''
         
         os.chdir(netcdf_dir)
@@ -32,26 +35,28 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
         ## Load netCDF files into a list
         nc_files = [x for x in os.listdir('.') if x.endswith('.nc')]
 
-        ## Create a list of lists where each sub-list contains the netCDF
-        ## files for pr, tmax, and tasmin
-        def divide_list(d,n):
+        def divide_lst(lst,n):
             '''
-            divide netCDF file list into groups of "n"
+            divide nc_files list into groups of "n"
             '''
-            for i in range(0, len(d), n):
-                yield d[i:i + n]
+            for i in range(0, len(lst), n):
+                yield lst[i:i + n]
 
-        nc_sep_list = list(divide_list(nc_files,3))
+        nc_sep_list = list(divide_lst(nc_files,3))
 
 
-        ## Convert netCDF files to dataframes
+        ## Convert netCDF datasets to dataframes
         netcdf_dic = {}
+        #loop through netcdf files
         for lst in nc_sep_list:
+            #create keys for each HUC12/method combonation
             dic_name = str(lst[0][0:5])
             netcdf_dic[dic_name] = {}
+            #loop through variables in netcdf files
             for nc in lst:
-                ds = xr.open_dataset(nc)
-                netcdf_dic[dic_name][str(nc[9::])] = ds.to_dataframe()
+                #use xr.open_dataset to open netcdf file in python
+                nc_var = xr.open_dataset(nc)
+                netcdf_dic[dic_name][str(nc[6::])] = nc_var.to_dataframe()
 
 
         ## Merge variables into one dataframe
@@ -90,7 +95,8 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
 
         edit_date_col(merged_dic)
 
-
+        #specify if the number of climate models being used is greater than 1
+        #If it is, then the dataframes have to be separated by model projections
         if proj_num > 1:
             ## Split site dataframes into separate dataframes   
             proj_dict = {}
@@ -140,7 +146,9 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
 
 
             sep_by_loc(renamed_dic, sep_loc_dic, num_locs) 
-
+        
+        #Assign finished dictionary to output dictionary based on
+        #whether they have more than 1 projection and/or location
         if proj_num > 1 and num_locs >1:
             output_dic = sep_loc_dic
 
@@ -163,31 +171,27 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
         
         
     
-    def to_GDS_file(input_dic, data_type):
+    def to_GDS_file(input_dic):
         '''
         Formats dataframes in prep_dic to GDS format and downloads them to 
         text files
+        
+        input_dic = output_dic from netCDF_to_dic function
         '''
-        if data_type == 'mod':
+        def sep_by_period(dic, new_dic):
+            '''
+            separate dataframes by time periods
+            '''
+            for key in dic:
+                new_dic[key + '_19'] = dic[key].loc[0:20087]
+                new_dic[key + '_59'] = dic[key].loc[20088:34697]
+                new_dic[key + '_99'] = dic[key].loc[34698:49308]
 
-            def sep_by_period(dic, new_dic):
-                '''
-                seperate dataframes by time periods
-                '''
-                for key in dic:
-                    new_dic[key + '_19'] = dic[key].loc[0:20087]
-                    new_dic[key + '_59'] = dic[key].loc[20088:34697]
-                    new_dic[key + '_99'] = dic[key].loc[34698:49308]
+        sep_dic = {}
+        sep_by_period(input_dic, sep_dic)
 
-            sep_dic = {}
-            sep_by_period(input_dic, sep_dic)
-
-        if data_type == 'obs':
-            sep_dic = input_dic
-
-
-        if dwnsc_type == 'BCCA' and data_type == 'mod':
-            ### rename lon and lat columns in BCCA to match with LOCA columns
+        if dwnsc_type == 'BCCA':
+            # rename lon and lat columns in BCCA to match with LOCA columns
             for df in sep_dic:
                 sep_dic[df] = sep_dic[df].rename(columns={'longitude': 'lon'})
                 sep_dic[df] = sep_dic[df].rename(columns={'latitude' : 'lat'})
@@ -199,40 +203,44 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
             and remove "-" in front of the value
             '''
             for key in d:
-                if data_type == 'mod':
-                    d[key].lon = d[key].lon - 360
-                    d[key].lon = d[key].lon.astype(str).replace('(-)', '', regex=True)
-                    d[key].lon = d[key].lon.astype(float)
-
-                if data_type == 'obs':
-                    d[key].lon = d[key].lon.astype(str).replace('(-)', '', regex=True)
-                    d[key].lon = d[key].lon.astype(float)
+                d[key].lon = d[key].lon - 360
+                d[key].lon = d[key].lon.astype(str).replace('(-)', '', regex=True)
+                d[key].lon = d[key].lon.astype(float)
 
         coord_360to180(sep_dic)
 
+        
         def dd_to_dms(dd):
             '''
             Convert degree decimal coordinates to DMS format
 
             Function is used in coord_to_dict function
+            
+            dd = decimal degrees
             '''
+            #Use divmod to calculate DMS from dd
+            #First value = quotient of numbers,
+            #Second value = remainder of the quotient
             mnt,sec = divmod(dd*3600,60)
             deg, mnt = divmod(mnt,60)
 
+            #If minute value is less than 10, then a zero must go before it
+            #so that the spacing and values are correct
             if mnt >= 10:
-                    deg = str('0' +str(deg)[:2])
+                    deg = str('0' + str(deg)[:2])
                     mnt = str(mnt)[:2]
                     return deg+mnt
 
             elif mnt <10:
-                    deg = str('0' +str(deg)[:2])
-                    mnt = str('0' +str(mnt)[:1])
+                    deg = str('0' + str(deg)[:2])
+                    mnt = str('0' + str(mnt)[:1])
                     return deg+mnt
 
 
         def coord_to_dict(d, new_lat, new_lon):
             '''
-            Create a dictionary of lat/lon values for each lat/lon combo
+            Create a dictionary of the lat/lon values in DMS format
+            for each GPS coordinate
             '''
             for key in d:
                 new_lat[key] = dd_to_dms(d[key].lat.iloc[1])
@@ -272,27 +280,30 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
 
         round_vals(sep_dic)
 
+        
         def remove_low_pr(d):
+            '''
+            Low precip events are removed to increase cligen's accuracy when
+            predicting the monthly/daily probability of precip 
+            '''
             for key in d:
                 d[key]['pr'] = d[key]['pr'].replace(0.1, 0)
                 d[key]['pr'] = d[key]['pr'].replace(0.2, 0)
                 d[key]['pr'] = d[key]['pr'].replace(0.3, 0)
 
-
         remove_low_pr(sep_dic)
 
-        ## Create empy dictionaries for ID strings
+        
+        #Create empy dictionaries for ID strings
         ID_strings = {}
 
-        ## Create dictionary of elevation values by site
-        elev_dic = {'BE1':'299','DO1':'388', 'GO1':'336',                    'RO1':'462', 'ST1':'402'}
+        #Create dictionary of elevation values by site
+        elev_dic = {'BE1':'299','DO1':'388', 'GO1':'336',\
+                    'RO1':'462', 'ST1':'402'}
 
-        ## ID strings at top of GDS files require specific number of spaces
-        ## between country/site ID and lat/lon/elevation values
-        if data_type == 'mod':
-            spaces = str('                                   ')
-        if data_type == 'obs':
-            spaces = str('                                         ')
+        #ID strings at top of GDS files require specific number of spaces
+        #between country/site ID and lat/lon/elevation values
+        spaces = str('                                   ')
 
         def Create_top_info(d, new_dic, lat_vals, lon_vals):
             '''
@@ -308,22 +319,24 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
         Create_top_info(sep_dic,ID_strings, lat_values, lon_values)
 
 
-        ### Create new file for each dataframe and write ID strings and data in GDS
-        ### to it
+        #Create new file for each dataframe and write ID strings to the first line followed
+        #by the climate data in GDS format
         for df, ID in zip(sep_dic, ID_strings):
             with open(str(GDS_out_path + df + '.txt'), 'w+') as file:
                 lines = file.readlines()
 
                 df = sep_dic[df]
 
-                new_lines = ['{}{}  {}  {}'.format(date, str(tmax)[0:5], str(tmin)[0:5], str(pr)[0:5])                                                    for date, tmax, tmin, pr in                                                    zip(df['time'], df['tasmax'], df['tasmin'], df['pr'])]
+                new_lines = ['{}{}  {}  {}'.format(date, str(tmax)[0:5], str(tmin)[0:5], str(pr)[0:5]) \
+                                                   for date, tmax, tmin, pr in \
+                                                   zip(df['time'], df['tasmax'], df['tasmin'], df['pr'])]
 
                 file.writelines(str(ID_strings[ID])+'\n')
                 for new_line in new_lines:
                     file.writelines(str(new_line)+'\n')
 
     #Run to_GDS_file function                
-    to_GDS_file(prep_dic, 'mod')
+    to_GDS_file(prep_dic)
     
 #Set up input parameters for netcdf_to_GDS function and run for each downscaling type
 LOCA_netcdf = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1_DEP\\netcdf\\LOCA\\'
