@@ -34,9 +34,8 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
     
     import shutil, os
     import pandas as pd
-    import numpy as np
     
-    # Prep functions that are used twice in gen_cli_file function, to be used later in function
+    # Prep create_out_string function which is used later in script after calibrated values have been calculated
     def create_out_string(df, var_name):
         '''
         creates string of calibrated data in .top file format
@@ -44,13 +43,14 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
         var = list(df)
 
         if var_name == 'MEAN P  ' or var_name == 'P(W|W)  ':
-            new_line = str('{}{:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}'                           .format(var_name, var[0], var[1], var[2], var[3], var[4], var[5],                                   var[6], var[7], var[8], var[9], var[10], var[11])) 
+            new_line = str('{}{:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}'\
+                           .format(var_name, var[0], var[1], var[2], var[3], var[4], var[5],\
+                                   var[6], var[7], var[8], var[9], var[10], var[11])) 
 
         else:
-            new_line = str('{}{:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f}'                           .format(var_name, var[0], var[1], var[2], var[3], var[4], var[5],                                   var[6], var[7], var[8], var[9], var[10], var[11]))
-
-
-
+            new_line = str('{}{:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f} {:5.2f}'\
+                           .format(var_name, var[0], var[1], var[2], var[3], var[4], var[5], 
+                                   var[6], var[7], var[8], var[9], var[10], var[11]))
 
         return new_line
     
@@ -138,12 +138,13 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
 
         # Calculate the daily probability of precip for each month in the obs_data
         PW = Monthly_pr / (n_days[0] * mean_pr_e)
+        print(PW)
 
 
         #Read in uncalibrated .top file
         top_files = [x for x in os.listdir(top_path) if x.endswith('{}.top'.format(base_id))]
 
-        def top_to_dic(output_dic):
+        def top_to_dic(Pwd_output_dic, skewp_output_dic):
             '''
             Loops through set of .top files and puts data into a dictionary
             of dataframes
@@ -153,25 +154,33 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 top_data = pd.read_csv(str(top_path + top_file), skiprows = 3, sep = '\s+', header=None, engine = 'python')
                 Months = [1,2,3,4,5,6,7,8,9,10,11,12]
                 #Create temporary dataframe that drops NaN columns for the P(W|D) row
-                Pw_d_i = top_data.drop([12,13], axis=1)
+                tempo_df = top_data.drop([12,13], axis=1)
                 #Create dataframe of P(W|D) values by month
-                Pw_d = pd.DataFrame(data = {'P(W|D)' : Pw_d_i.loc['P(W|D)'], 'Months':Months})
+                Pw_d = pd.DataFrame(data = {'P(W|D)' : tempo_df.loc['P(W|D)'], 'Months':Months})
                 Pw_d.set_index('Months', inplace =True)
+                #Create dataframe of monthly precip skew values
+                skewp = pd.DataFrame(data = {'SKEW P' : tempo_df.loc['SKEW P'], 'Months':Months})
+                skewp.set_index('Months', inplace =True)
+                #Do not let skew precip values be greater than 4.5 since the Pearson III model is not robust enough to handle
+                #skews greater than that
+                skewp.clip(lower=None, upper = 4.3, inplace = True)
 
-                output_dic[top_file[:-4]] = Pw_d
+                Pwd_output_dic[top_file[:-4]] = Pw_d
+                skewp_output_dic[top_file[:-4]] = skewp
 
-        monthly_PWDs = {}   
+        monthly_PWDs = {} 
+        monthly_skewp = {}  
 
-        top_to_dic(monthly_PWDs)
+        top_to_dic(monthly_PWDs, monthly_skewp)
 
         
         # Overwrite observed parameters to uncalibrated .TOP files
-        for df,top_file in zip(monthly_PWDs, top_files):
+        for df_PWD,df_skewp,top_file in zip(monthly_PWDs,monthly_skewp, top_files):
 
             # calculate monthly average probablity of wet days (wet day = precip)
-            neg_PWD = monthly_PWDs[df].astype(float).multiply(-1)
-            PWD_plus1 = monthly_PWDs[df].astype(float) + 1
-            monthly_PWW = abs((neg_PWD.div(PW, axis = 0)) + PWD_plus1)
+            neg_PWD = monthly_PWDs[df_PWD].astype(float).multiply(-1)
+            PWD_plus1 = monthly_PWDs[df_PWD].astype(float) + 1
+            monthly_PWW = neg_PWD.div(PW, axis = 0) + PWD_plus1
 
             #open uncalibrated .top file for reading/writing
             with open(str(top_path + top_file), 'r+') as file:
@@ -181,6 +190,7 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 #Turn dataframe back to string and then rewrite to file
                 #Create new lines for writing using create_out_string
                 new_meanP = create_out_string(mean_pr_e, ' MEAN P  ')
+                skewp = create_out_string(monthly_skewp[df_skewp]['SKEW P'], ' SKEW P  ')
                 new_PWW = create_out_string(monthly_PWW['P(W|D)'], ' P(W|W)  ')
                 new_tmax = create_out_string(Monthly_tmax, ' TMAX AV ')
                 new_tmin = create_out_string(Monthly_tmin, ' TMIN AV ')
@@ -196,13 +206,14 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 #write lines to truncated file
                 file.writelines(lines[0:3])
                 file.writelines(new_meanP + '\n')
-                file.writelines(lines[4:6])
+                file.writelines(lines[4:5])
+                file.writelines(skewp + '\n')
                 file.writelines(new_PWW + '\n')
                 file.writelines(lines[7])
                 file.writelines(new_tmax + '\n')
                 file.writelines(new_tmin + '\n')
                 file.writelines(new_sdmax + '\n')
-                file.writelines(new_sdmax + '\n')
+                file.writelines(new_sdmin + '\n')
                 file.writelines('\n')
 
                 file.close()
@@ -225,21 +236,65 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
         statements)
         '''
 
+        def Fix_100deg_vals(file_lst):
+            '''
+            GenStPar Program does not limit the length of values so any temperature over 100 degF 
+            will not be separated from the preceeding value. This causes problems when loading in 
+            the data and calibrating the maximum temperature. Normally happens in the 2069-99 time 
+            period
+
+            To fix this, read in the .top files and edit 
+
+            file_lst = list of .top files
+            '''
+            for top_file in file_lst:
+                with open(str(top_dir + top_file), 'r+') as file:
+                    lines = file.readlines() #Read in .top file lines
+                    tmax_line = lines[8].split() #Select tmax line (always 8) and split values into list
+                    #if a value in the new list has a length > 5, separate those values.
+                    for count,t_val in enumerate(tmax_line):
+                        if len(t_val) > 8:
+                            first_val = t_val[0:5]
+                            second_val = t_val[5::] #Usually the tmax value with 100+ degrees
+                            round(float(second_val), 1) #round the 100+ degree value to only have one decimal
+                            #reassign separated values to tmax_line
+                            tmax_line[count] = first_val
+                            tmax_line.insert(int(count+1), str(second_val))
+                            print(tmax_line)
+                    lines[8] = str(' ' + ' '.join(tmax_line) + '\n')
+
+                    # move file pointer to the beginning of a file
+                    file.seek(0)
+                    # truncate the file
+                    file.truncate()
+                    #write new lines
+                    file.writelines(lines)
+
         if cal_uncal == 'cal':
             # Load in calibrated basline files
             top_files = [x for x in os.listdir(top_path) if x.endswith('19.top')]
+            top_dir = top_path
+
+            #read in .top files for 2069-99 period from 'calibrated' directory so that
+            #any 100+ deg days can be fixed in "Fix_100deg_vals" function
+            top_files_99 = [x for x in os.listdir(top_path) if x.endswith('99.top')]
+
+            Fix_100deg_vals(top_files_99)
 
         if cal_uncal == 'uncal':
             # Load in all uncalibrated files
             top_files = [x for x in os.listdir(uncal_path) if x.endswith('.top')]
+            top_dir = uncal_path
+
+            Fix_100deg_vals(top_files)
+
 
         for top_file in top_files:
+
             Months = [1,2,3,4,5,6,7,8,9,10,11,12]
-            # Read in .top file
-            if cal_uncal == 'cal':
-                top_data = pd.read_csv(str(top_path + top_file), skiprows = 3, sep = '\s+', header=None, engine = 'python')
-            if cal_uncal == 'uncal':
-                top_data = pd.read_csv(str(uncal_path + top_file), skiprows = 3, sep = '\s+', header=None, engine = 'python')
+
+            # Read in .top files to dataframes
+            top_data = pd.read_csv(str(top_dir + top_file), skiprows = 3, sep = '\s+', header=None, engine = 'python')
 
             #Create temporary dataframes that drop necessary NaN columns for the respective variables
             Pwd_i = top_data.drop([12,13], axis=1)
@@ -451,11 +506,10 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
 
     
 ### Define function inputs
-top_path = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1_DEP\\GDS\\Test_Runs\\'
-uncal_path = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1_DEP\\Uncalibrated\\Test_Runs\\'
-obs_path = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1_DEP\\obs_data\\GO1_MnDNR_Obs.xlsx'
-par_path = 'C://Users//Garner//Soil_Erosion_Project//WEPP_PRWs//GO1_DEP//PAR//Test_Runs//'
+top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/GDS/Test_Runs/'
+uncal_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/Uncalibrated/Test_Runs/'
+obs_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/obs_data/GO1_MnDNR_Obs.xlsx'
+par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/PAR/Test_Runs/'
 
 
 gen_cli_file(top_path, 'GO1', uncal_path, obs_path, '19', '59', par_path)
-

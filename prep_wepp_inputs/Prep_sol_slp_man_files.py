@@ -51,7 +51,16 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out):
 
             input_lst will be written to a file in .run format
             '''
-            input_lst = ['m','Yes','1','1','No','2','No',                         '../output/{}.loss.dat'.format(hill), 'No',                         'Yes','../output/{}.plant.dat'.format(hill),                         'Yes','../output/{}.soil.dat'.format(hill), 'No', 'No',                         'Yes', '../output/{}.ebe.dat'.format(hill),                         'Yes', '../output/{}.element.dat'.format(hill),'No', 'No',                         'Yes', '../output/{}.yield.dat'.format(hill),                         '{}.man'.format(p_hill), '{}.slp'.format(p_hill),                         '{}.cli'.format(p_hill), '{}.sol'.format(p_hill),                         '0', run_yrs, '0']
+            input_lst = ['m','Yes','1','1','No','2','No',\
+                '../output/{}.loss.dat'.format(hill), 'No',\
+                'Yes','../output/{}.plant.dat'.format(hill),\
+                'Yes','../output/{}.soil.dat'.format(hill), 'No', 'No',\
+                'Yes', '../output/{}.ebe.dat'.format(hill),\
+                'Yes', '../output/{}.element.dat'.format(hill),'No', 'No',\
+                'Yes', '../output/{}.yield.dat'.format(hill),\
+                '{}.man'.format(p_hill), '{}.slp'.format(p_hill),\
+                '{}.cli'.format(p_hill), '{}.sol'.format(p_hill),\
+                '0', run_yrs, '0']
 
             return input_lst
         
