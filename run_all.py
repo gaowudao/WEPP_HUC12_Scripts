@@ -1,8 +1,9 @@
 from prep_wepp_inputs.CMIP5_to_CLI.download_ftp import extract_netcdf
 from prep_wepp_inputs.CMIP5_to_CLI.netcdf_to_GDS import netcdf_to_GDS
+from prep_wepp_inputs.CMIP5_to_CLI.Generate_calibrated_cli_files import gen_cli_file
 
 
-def netCDF_to_calcli(HUC12_path, ftp_ID, HUC12_name, dwnsc_type, num_locs, proj_num,):
+def netCDF_to_calcli(HUC12_path, ftp_ID, HUC12_name, dwnsc_type, num_locs, proj_num,obs_cli_xlsx):
     '''
     Combines functions from scripts in CMIP5_to_CLI folder to produce fully calibrated 
     .cli files from the raw netCDF inputs.
@@ -20,11 +21,17 @@ def netCDF_to_calcli(HUC12_path, ftp_ID, HUC12_name, dwnsc_type, num_locs, proj_
     or greater than 1. If greater than 1, input = 2 or any other integer greater than 1. 
 
     proj_num = number of projections/models in netcdf (same numbering system as num_locs)
+
+    obs_cli_xlsx = excel spreadsheet with observed climate data. See read_me for formatting
     '''
 
-    #Set paths to netcdf and GDS directories and define column labels, model IDs,  
+    #Set paths to netcdf, GDS, PAR, uncalibrated, and observed directories 
+    #as well as define column labels, model IDs, and observed excel file names
     netcdf_path = str(HUC12_path + '/netCDF/{}/'.format(dwnsc_type))
     GDS_path = str(HUC12_path + '/GDS/{}/'.format(dwnsc_type))
+    uncal_path = str(HUC12_path + '/Uncalibrated/{}/'.format(dwnsc_type))
+    obs_path = str(HUC12_path + '/obs_data/{}/'.format(obs_cli_xlsx))
+    par_path = str(HUC12_path + '/PAR/{}/'.format(dwnsc_type))
     var_cols = '{}_cols.format(dwnsc_type)'
     model_IDs = str(HUC12_path + 'netcdf/{}_projections_Short.txt'.format(dwnsc_type))
  
@@ -32,7 +39,10 @@ def netCDF_to_calcli(HUC12_path, ftp_ID, HUC12_name, dwnsc_type, num_locs, proj_
     #calibrated climate files
     extract_netcdf(ftp_ID, netcdf_path, HUC12_name)
     netcdf_to_GDS(netcdf_path, var_cols, model_IDs, num_locs, proj_num, dwnsc_type, GDS_path)
+    gen_cli_file(GDS_path, HUC12_name, uncal_path, obs_path, '19', '59', par_path)
 
+
+############# SET UP INPUTS FOR "netCDF_to_calcli" FUNCTION ###################
 
 #Define ftp IDs. First ID in each list is BCCA and second is LOCA
 BE1_ftp_lst = ['202112011135Nr5d_n_VIqkwo', '202112011141Nr5l_n_PB_INf']
@@ -48,5 +58,10 @@ BCCA_cols = ['latitude', 'longitude', 'projection', 'time']
 #Define path to HUC12 watershed directory
 HUC12_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/'
 
-netCDF_to_calcli(HUC12_path, DO1_ftp_lst[0], 'DO1', 'BCCA')
+############# RUN netCDF_to_calcli ##################
+netCDF_to_calcli(HUC12_path, DO1_ftp_lst[0], 'DO1', 'BCCA', 2, 2,'DO1_MnDNR_Obs.xlsx',)
+
+
+
+
 

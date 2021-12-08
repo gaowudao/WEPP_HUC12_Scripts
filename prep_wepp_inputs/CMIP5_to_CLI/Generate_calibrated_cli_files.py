@@ -71,12 +71,12 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
         for file in gds_files:
             os.system("ECHO {} |GenStPar.exe".format(file))
 
-
+    print('Creating initial .top files from GDS inputs...')
     gds_to_top()
     
     
     #Copy uncalibrated .TOP files to uncal_path 
-    
+    print('Copying uncalibrated .top files to Uncalibrated directory...')
     for file in os.listdir(top_path):
         if file.startswith(site_name) and file.endswith('.top'):
             uncal_file = str(uncal_path + file)
@@ -153,17 +153,19 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 # Read in .top file
                 top_data = pd.read_csv(str(top_path + top_file), skiprows = 3, sep = '\s+', header=None, engine = 'python')
                 Months = [1,2,3,4,5,6,7,8,9,10,11,12]
-                #Create temporary dataframe that drops NaN columns for the P(W|D) row
-                tempo_df = top_data.drop([12,13], axis=1)
+                #Create temporary dataframe that drops unneeded columns for the P(W|D) and skew p rows
+                P_df = top_data.drop([12,13], axis=1)
+                skew_df = top_data.drop([0,13], axis=1)
                 #Create dataframe of P(W|D) values by month
-                Pw_d = pd.DataFrame(data = {'P(W|D)' : tempo_df.loc['P(W|D)'], 'Months':Months})
+                Pw_d = pd.DataFrame(data = {'P(W|D)' : P_df.loc['P(W|D)'], 'Months':Months})
                 Pw_d.set_index('Months', inplace =True)
                 #Create dataframe of monthly precip skew values
-                skewp = pd.DataFrame(data = {'SKEW P' : tempo_df.loc['SKEW P'], 'Months':Months})
+                skewp = pd.DataFrame(data = {'SKEW_P' : skew_df.loc['SKEW'], 'Months':Months})
                 skewp.set_index('Months', inplace =True)
+                print(skewp['SKEW_P'])
                 #Do not let skew precip values be greater than 4.5 since the Pearson III model is not robust enough to handle
                 #skews greater than that
-                skewp.clip(lower=None, upper = 4.3, inplace = True)
+                skewp['SKEW_P'] = skewp['SKEW_P'].astype(float).clip(0,4.3)
 
                 Pwd_output_dic[top_file[:-4]] = Pw_d
                 skewp_output_dic[top_file[:-4]] = skewp
@@ -190,7 +192,7 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 #Turn dataframe back to string and then rewrite to file
                 #Create new lines for writing using create_out_string
                 new_meanP = create_out_string(mean_pr_e, ' MEAN P  ')
-                skewp = create_out_string(monthly_skewp[df_skewp]['SKEW P'], ' SKEW P  ')
+                skewp = create_out_string(monthly_skewp[df_skewp]['SKEW_P'], ' SKEW P  ')
                 new_PWW = create_out_string(monthly_PWW['P(W|D)'], ' P(W|W)  ')
                 new_tmax = create_out_string(Monthly_tmax, ' TMAX AV ')
                 new_tmin = create_out_string(Monthly_tmin, ' TMIN AV ')
@@ -219,7 +221,8 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 file.close()
 
         file.close()
-        
+    
+    print('Calibrating baseline .top files....')
     #run create_cal_top     
     create_cal_top()
     
@@ -278,14 +281,12 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
             #read in .top files for 2069-99 period from 'calibrated' directory so that
             #any 100+ deg days can be fixed in "Fix_100deg_vals" function
             top_files_99 = [x for x in os.listdir(top_path) if x.endswith('99.top')]
-
             Fix_100deg_vals(top_files_99)
 
         if cal_uncal == 'uncal':
             # Load in all uncalibrated files
             top_files = [x for x in os.listdir(uncal_path) if x.endswith('.top')]
             top_dir = uncal_path
-
             Fix_100deg_vals(top_files)
 
 
@@ -305,10 +306,11 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
             meanP_i.columns = [Months]
 
             #Create dataframe of variables by month
-            df = pd.DataFrame(data = {'P(W|D)':Pwd_i.loc['P(W|D)'], 'P(W|W)':Pww_i.loc['P(W|W)'], 
-                                      'Mean_P':meanP_i.loc['MEAN'], 'TMAX':meanP_i.loc['TMAX'],\
-                                      'TMIN':meanP_i.loc['TMIN'], 'SD TMAX':meanP_i.iloc[7],\
-                                      'SD TMIN':meanP_i.iloc[8], 'Months':Months})
+            df = pd.DataFrame(data = {'P(W|D)':Pwd_i.loc['P(W|D)'], 'P(W|W)':Pww_i.loc['P(W|W)'],\
+                                      'Mean_P':meanP_i.loc['MEAN'], 'SKEW_P':meanP_i.loc['SKEW'],\
+                                      'TMAX':meanP_i.loc['TMAX'], 'TMIN':meanP_i.loc['TMIN'],\
+                                      'SD TMAX':meanP_i.iloc[7], 'SD TMIN':meanP_i.iloc[8],\
+                                      'Months':Months})
             df.set_index('Months', inplace =True)
 
             #Calculate P(w)
@@ -350,6 +352,8 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
             ##Monthly mean P(W|W)
             cal_PWW = abs(uncal_fut_df['P(W|W)'] - uncal_base_df['P(W|W)']) + cal_base_df['P(W|W)']
 
+            cal_SKEWP = abs(uncal_fut_df['SKEW_P'] - uncal_base_df['SKEW_P']) + cal_base_df['SKEW_P']
+
             cal_tmax = abs(uncal_fut_df['TMAX'] - uncal_base_df['TMAX']) + cal_base_df['TMAX']
 
             cal_tmin = abs(uncal_fut_df['TMIN'] - uncal_base_df['TMIN']) + cal_base_df['TMIN']
@@ -367,6 +371,7 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 #Using create_out_string function from before
                 new_meanP = create_out_string(cal_mean_P, ' MEAN P  ')
                 new_PWW = create_out_string(cal_PWW, ' P(W|W)  ')
+                new_skewp = create_out_string(cal_SKEWP, ' SKEW P  ')
                 new_tmax = create_out_string(cal_tmax, ' TMAX AV ')
                 new_tmin = create_out_string(cal_tmin, ' TMIN AV ')
                 new_sdmax = create_out_string(cal_sdmax, ' SD TMAX ')
@@ -379,7 +384,8 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
 
                 file.writelines(lines[0:3])
                 file.writelines(new_meanP + '\n')
-                file.writelines(lines[4:6])
+                file.writelines(lines[4])
+                file.writelines(new_skewp + '\n')
                 file.writelines(new_PWW + '\n')
                 file.writelines(lines[7])
                 file.writelines(new_tmax + '\n')
@@ -394,7 +400,8 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
     mod_lst = []
     for tempor_mod in mod_tempor_lst:
         mod_lst.append(tempor_mod.replace(fut_id, ''))
-        
+    
+    print('Calibrating future .top files...')
     # Run calibrate_fut_top for each method/location/model combo
     for mod in mod_lst:  
         calibrate_fut_top(mod, str(mod+'19'), uncal_monthly_vars, cal_monthly_vars, top_path)
@@ -460,6 +467,7 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
             # Assign to new_df
             par_dic[key] = station_lines
 
+    print('Creating .par files from calibrated .top files')
     top_to_par(top_lines, par_files)
 
     def write_par(par_dic):
@@ -502,6 +510,7 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
 
             os.system("cligen53.exe -b1 -y{} -i{} -o{}.cli -t5".format(years,file,str(file)[:-4]))
 
+    print('Generating .cli file from .par file...')
     par_to_cli(par_path,par_files)
 
     
