@@ -21,42 +21,38 @@ def edit_Keff_val(mod_labs, scen_dir, scale_val):
 
     Each OFE has its own 'line 4'
     '''
-    #loop through climate model labels in scenario directory
-    for mod in mod_labs:
-        #Create path to run directory
-        run_dir = str(scen_dir + mod + '_19' + '\\wepp\\runs\\')
+    #Create path to run directory
+    run_dir = str(scen_dir + mod + '_19' + '\\wepp\\runs\\')
 
-        #loop through all input files in directory
-        for file_name in os.listdir(run_dir):
+    #loop through all input files in directory
+    for file_name in os.listdir(run_dir):
 
-            #select soil files
-            if file_name.endswith('.sol'):
-                file = open(str(run_dir+file_name), "r+") # read in file 
-                lines = file.readlines()  #read lines to a list
+        #select soil files
+        if file_name.endswith('.sol'):
+            file = open(str(run_dir+file_name), "r+") # read in file 
+            lines = file.readlines()  #read lines to a list
 
-                #loop through selected lines in each file
-                for num, line in enumerate(lines, 0):
+            #loop through selected lines in each file
+            for num, line in enumerate(lines, 0):
 
-                    find_key = '0.750000' # Find 'Line 4' for each OFE
+                find_key = '0.750000' # Find 'Line 4' for each OFE
 
-                    if find_key in line:
-                        new_line = str(line[:-9] + str(round(float(line[-9::])*scale_val, 6)) + '\n')
-                        lines[num] = new_line
+                if find_key in line:
+                    new_line = str(line[:-9] + str(round(float(line[-9::])*scale_val, 6)) + '\n')
+                    lines[num] = new_line
 
-                # move file pointer to the beginning of a file
-                file.seek(0)
-                # truncate the file
-                file.truncate()
+            # move file pointer to the beginning of a file
+            file.seek(0)
+            # truncate the file
+            file.truncate()
 
-                #write new lines
-                file.writelines(lines)
+            #write new lines
+            file.writelines(lines)
                                
                 
 scen_dir = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1_DEP\\Runs\\DEP_DF_10K\\'
 
-mod_labs = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6',            'B1', 'B2', 'B3', 'B4', 'B5', 'B6']
-
-edit_Keff_val(mod_labs, scen_dir, 10)
+edit_Keff_val(scen_dir, 10)
 
 
 # In[ ]:

@@ -13,6 +13,7 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out):
     2.) .run files are created
     3.) Gets crop rotations, average slopes, and soil types for each hillslope
     4.) Rotations in .man files are extended to 60 years
+    5.) Effective hydraulic conductivity values in soil files are calibrated (x10) 
     '''
     
     import shutil, os
@@ -70,10 +71,6 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out):
         with open(str(runs_dir + '{}.run'.format(p_hill)), 'w+') as file:
             for line in inputs:
                 file.writelines(str(line)+'\n')
-
-
-    input_file_names = []
-    output_file_names = []
     
     print('Creating .run files...')
     
@@ -365,9 +362,49 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out):
     print('Increasing crop rotation length in files...')
     Increase_rot_length()
 
+    #Send hillslope_info to excel spreadsheet
     hillslope_info.to_excel('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/{}_info.xlsx'.format(HUC12_xl_out, HUC12_xl_out))
-    
+
+
+    def edit_Keff_val(scale_val):
+        '''
+        Multiplys the Keff parameter in the .sol input file by a given
+        scale value for each overland flow element(OFE)
+
+        'line 4' = Line that includes the Keff parameter for the OFE. 
+
+        Each OFE has its own 'line 4'
+        '''
+        #Create path to run directory
+        
+        #loop through all input files in directory
+        for file_name in os.listdir(runs_dir):
+
+            #select soil files
+            if file_name.endswith('.sol'):
+                file = open(str(runs_dir+file_name), "r+") # read in file 
+                lines = file.readlines()  #read lines to a list
+
+                #loop through selected lines in each file
+                for num, line in enumerate(lines, 0):
+
+                    find_key = '0.750000' # Find 'Line 4' for each OFE
+
+                    if find_key in line:
+                        new_line = str(line[:-9] + str(round(float(line[-9::])*scale_val, 6)) + '\n')
+                        lines[num] = new_line
+
+                # move file pointer to the beginning of a file
+                file.seek(0)
+                # truncate the file
+                file.truncate()
+
+                #write new lines
+                file.writelines(lines)
+
+    edit_Keff_val(10)
+        
     
 path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/BE1/Runs/wepp/runs/'
-test = prep_input_files(path, '070200110305_', 'BE1')
+prep_input_files(path, '070200110305_', 'BE1')
 

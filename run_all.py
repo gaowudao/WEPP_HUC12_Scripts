@@ -1,6 +1,7 @@
 from prep_wepp_inputs.CMIP5_to_CLI.download_ftp import extract_netcdf
 from prep_wepp_inputs.CMIP5_to_CLI.netcdf_to_GDS import netcdf_to_GDS
 from prep_wepp_inputs.CMIP5_to_CLI.Generate_calibrated_cli_files import gen_cli_file
+from prep_wepp_inputs.Prep_sol_slp_man_files import prep_input_files
 
 
 def netCDF_to_calcli(HUC12_path, ftp_ID, HUC12_name, dwnsc_type, num_locs, proj_num,obs_cli_xlsx):
@@ -61,7 +62,13 @@ HUC12_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/'
 ############# RUN netCDF_to_calcli ##################
 netCDF_to_calcli(HUC12_path, DO1_ftp_lst[0], 'DO1', 'BCCA', 2, 2,'DO1_MnDNR_Obs.xlsx',)
 
-
+############# PREPARE OTHER INPUT FILES FOR WEPP MODEL #################
+def prep_base_fut_inputs(HUC12_path, wshed_ID, HUC12_name):
+    '''
+    
+    '''
+    runs_dir = str(HUC12_path + 'Runs/wepp/runs/')
+    prep_input_files(runs_dir, wshed_ID, HUC12_name)
 
 
 
