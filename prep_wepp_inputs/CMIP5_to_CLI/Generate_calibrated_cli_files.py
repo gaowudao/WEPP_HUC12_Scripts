@@ -512,13 +512,3 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
 
     print('Generating .cli file from .par file...')
     par_to_cli(par_path,par_files)
-
-    
-### Define function inputs
-top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/GDS/Test_Runs/'
-uncal_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/Uncalibrated/Test_Runs/'
-obs_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/obs_data/GO1_MnDNR_Obs.xlsx'
-par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/PAR/Test_Runs/'
-
-
-gen_cli_file(top_path, 'GO1', uncal_path, obs_path, '19', '59', par_path)

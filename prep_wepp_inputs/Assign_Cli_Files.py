@@ -2,19 +2,22 @@
 # coding: utf-8
 
 # In[1]:
-
-
-import shutil, os
-import pandas as pd
-import numpy as np
-
-def assign_cli_files(coords_path, cli_path, hill_dir, model_labs, wshed):
+def assign_cli_files(coords_path, cli_path, Run_dir, model_labs, man_labs, periods, HUC12_name):
     '''
     Loads in GPS coordinates from .cli files, matches them with the closest hillslope coordinates,
     and then copies the .cli files to a directory under the name of the matched hillslope's ID. 
+
+    Run_dir and cli_dir = parent directories for where .cli files are placed (Run_dir)
+    and where base .cli_files are taken from (cli_dir)
     '''
+
+    import shutil, os
+    import pandas as pd
+    import numpy as np
+
+
     #Read in hillslope coordinates file to dataframe and rename columns
-    hillslope_coords = pd.read_csv(coords_path)
+    hillslope_coords = pd.read_excel(coords_path)
     hillslope_coords = hillslope_coords.rename(columns={'fpath': 'ID', 'LON': 'lon', 'LAT':'lat'})
 
     def load_cli_latlon():
@@ -22,18 +25,15 @@ def assign_cli_files(coords_path, cli_path, hill_dir, model_labs, wshed):
         Creates dictionary of latitude and longitude values from .cli files in 
         cli_path directory
         '''
-        ### Load in cli files
-        os.chdir(cli_path)
-        cli_files = [x for x in os.listdir('.') if x.endswith('.cli')]
-
-        ### Read in top files as lines in a list
+        ### Load in cli files and read in as lines in a list
         cli_lines = {}
-        for file_name in cli_files:
-            temp_lst = []
-            with open (file_name, 'rt') as file:
-                for line in file:
-                    temp_lst.append(line)
-            cli_lines[file_name] = temp_lst
+        for file_name in os.listdir(cli_path):
+            if file_name.endswith('.cli'):
+                temp_lst = []
+                with open (str(cli_path + file_name), 'rt') as file:
+                    for line in file:
+                        temp_lst.append(line)
+                cli_lines[file_name] = temp_lst
 
 
         def create_latlon_dfs(cli_dic, lat_dic, lon_dic):
@@ -48,36 +48,30 @@ def assign_cli_files(coords_path, cli_path, hill_dir, model_labs, wshed):
                 lat_dic[str(key[4:11])] = float(cli_dic[key][4][4:9])
                 lon_dic[str(key[4:11])] = float(cli_dic[key][4][12:18])
 
-        #Create dictionary of lat and lon values in each file    
+        #Create empty dictionary for assigning lat and lon values from each file    
         lat_dic = {}
         lon_dic = {}
 
         create_latlon_dfs(cli_lines, lat_dic, lon_dic)
 
-        ### Create dataframe from dictionaires
+        ### Create dataframe of labels and lat/lon values from dictionaires
         coords = pd.DataFrame({'Labels':lat_dic.keys(),'lat':lat_dic.values(), 'lon': lon_dic.values()})
 
         ### Get unique coordinate points/areas in dataframe format
         uni_locs = coords.drop_duplicates(subset = ['lat', 'lon']).reset_index().drop('index', axis = 1)
         return uni_locs
 
-    uni_locs = load_cli_latlon(cli_path)
+    print('Matching hillslope coordinates to .cli coordinates...')
+    uni_locs = load_cli_latlon()
 
 
     def assign_files(cli_locs_df):
         '''
         Assign the .cli files to their respective run directory for each hillslope in 
-        the watershed. Lat and lon coordinates are used to match hillslopes with the
-        climate region/file they are in. 
-
-        hill_dict = dictionary with hillslope info
+        the watershed. Lat and lon coordinates from the .cli files are matched with the 
+        coordinates for each hillslope (hillslope_coords)
 
         cli_locs_df = dataframe with unique lat/lon values for .cli files
-
-        hill_dir and cli_dir = parent directories for where .cli files are placed (hill_dir)
-        and where base .cli_files are taken from (cli_dir)
-
-        wshed = name of watershed with WEPP hilsllopes
         '''
         
         hill_df = hillslope_coords
@@ -103,61 +97,38 @@ def assign_cli_files(coords_path, cli_path, hill_dir, model_labs, wshed):
 
             ### Copy .cli file to respective run directory and rename it 
             ### to match the hillslope ID + .cli
-
-
-            period_labels = ['19', '59', '99']
-            man_labels = ['CC', 'CT', 'Comb', 'Per', 'NC']
-
-            for mod_lab in model_labels:
-                for peri_lab in period_labels:
+            for mod_lab in model_labs:
+                for peri_lab in periods:
 
                     if peri_lab == '19':
-                        ### Create path to cli file
-                        cli_file = str(cli_dir + wshed + '_' + mod_lab + cli_loc_lab + peri_lab + '.cli')
+                        ### Create new cli file
+                        cli_file = str(cli_path + HUC12_name + '_' + mod_lab + cli_loc_lab + peri_lab + '.cli')
 
                         ### Create path to hillslope directory
-                        new_hill_dir = str(hill_dir + 'Base//' + mod_lab + '_' + peri_lab + '//' + 'wepp//' + 'runs//')
+                        hill_dir = str(Run_dir + 'Base/' + mod_lab + '_' + peri_lab + '/' + 'wepp/' + 'runs/')
 
                         ### Create new file name
-                        new_hill_file = str(new_hill_dir + 'p' + str(ID) + '.cli')
+                        new_cli_file = str(hill_dir + 'p' + str(ID) + '.cli')
 
                         ### Send cli file to hillslope directory
-                        shutil.copy(cli_file, new_hill_file)
+                        shutil.copy(cli_file, new_cli_file)
 
                     if peri_lab == '59' or peri_lab == '99':
-                        for man in man_labels:
+                        for man in man_labs:
                             ### Create path to cli file
-                            cli_file = str(cli_dir + wshed + '_' + mod_lab + cli_loc_lab + peri_lab + '.cli')
+                            cli_file_f = str(cli_path + HUC12_name + '_' + mod_lab + cli_loc_lab + peri_lab + '.cli')
 
                             ### Create path to hillslope directory
-                            new_hill_dir_f = str(hill_dir + man + '//' + mod_lab + '_' + peri_lab + '//' + 'wepp//' + 'runs//')
+                            hill_dir_f = str(Run_dir + man + '/' + mod_lab + '_' + peri_lab + '/' + 'wepp/' + 'runs/')
 
                             ### Create new file name
-                            new_hill_file_f = str(new_hill_dir_f + 'p' + str(ID) + '.cli')
+                            new_cli_file_f = str(hill_dir_f + 'p' + str(ID) + '.cli')
 
                             ### Send cli file to hillslope directory
-                            shutil.copy(cli_file, new_hill_file_f)
+                            shutil.copy(cli_file_f, new_cli_file_f)
         
-
-        assign_files(uni_locs): 
-
-        
-#Set up assign_cli_files inputs                
-coords_path = 'C://Users//Garner//Soil_Erosion_Project//WEPP_PRWs//GO1_DEP//Residue_Data//flowpaths.csv'            
-
-LOCA_cli_path = 'C://Users//Garner//Soil_Erosion_Project//WEPP_PRWs//GO1_DEP//PAR//LOCA_1116//'
-BCCA_cli_path = 'C://Users//Garner//Soil_Erosion_Project//WEPP_PRWs//GO1_DEP//PAR//LOCA_1116//'
-
-Runs_path = 'C://Users//Garner//Soil_Erosion_Project//WEPP_PRWs//GO1_DEP//Runs//'
-
-LOCA_mod_labels = ['L1','L2','L3','L4','L5','L6']    
-BCCA_mod_labels = ['B1','B2','B3','B4','B5','B6']
-
-
-assign_cli_files(coords_path, LOCA_cli_path, Runs_path, LOCA_mod_labels, 'GO1')
-assign_cli_files(coords_path, BCCA_cli_path, Runs_path, BCCA_mod_labels, 'GO1')
-
-
+    print('Assigning .cli files to directories based on hillslope coordinates...')
+    assign_files(uni_locs)
 # In[ ]:
 
 

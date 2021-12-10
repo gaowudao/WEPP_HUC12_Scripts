@@ -4,16 +4,34 @@
 # In[24]:
 
 
-def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out):
+def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out, Run_dir, model_labs, man_labs, periods):
     '''
     Prepares and extracts necssary information from .sol, .slp, and .man 
     input files for downstream editing
+
+    runs_dir = HUC12_path/Runs/{man scenario}/{cli scenario}/wepp/runs directory
+
+    HUC12_ID = ID number of HUC12 watershed from DEP project
+
+    HUC12_xl_out = name of watershed that will be inserted into the name of 
+    an output file that contains information on hillslope rotation, slopes, and
+    soil types.
+
+    Run_dir = path to Runs directory (HUC12_path/Runs/) which contains the sub-directories
+    for each management and climate scenario combination 
+
+    man/cli_labs = list of management and climate scenario labels as strings
+
+    periods = list of time periods as integers 
     
     1.) HUC12 IDs are removed from file names and replaced with p
     2.) .run files are created
     3.) Gets crop rotations, average slopes, and soil types for each hillslope
     4.) Rotations in .man files are extended to 60 years
     5.) Effective hydraulic conductivity values in soil files are calibrated (x10) 
+    6.) Create baseline and future run directories for each management and climate
+        scenario. Then copy the base wepp/runs directory with the newly edited/prepped 
+        files to each Run_dir. 
     '''
     
     import shutil, os
@@ -21,17 +39,18 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out):
     import numpy as np
     import re
     from statistics import mean
+    from distutils.dir_util import copy_tree
     
     print('Renaming files to WEPP format...')
     
     #Rename all file types in runs_dir
     for file in os.listdir(runs_dir):
+        if file.startswith(HUC12_ID):
+            file_num = file.replace(HUC12_ID, '')
+            old = str(runs_dir + file)
+            new = str(runs_dir + 'p' + file_num)
 
-        file_num = file.replace(HUC12_ID, '')
-        old = str(runs_dir + file)
-        new = str(runs_dir + 'p' + file_num)
-
-        os.rename(old, new)
+            os.rename(old, new)
 
 
 
@@ -401,10 +420,44 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out):
 
                 #write new lines
                 file.writelines(lines)
-
+    print('Scaling Keff value by 10...')
     edit_Keff_val(10)
-        
-    
-path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/BE1/Runs/wepp/runs/'
-prep_input_files(path, '070200110305_', 'BE1')
 
+    def create_dirs():
+        '''
+        Creates directories for each WEPP scenario run and then copies the base
+        wepp files for all hillslopes (excluding .cli files) to the newly created
+        run directory
+        '''
+        base_wepp = str(Run_dir + 'wepp/')
+
+        for mod_lab in model_labs:
+            for peri_lab in periods:
+
+                if peri_lab == '19':
+                    
+                    #Create path to new baseline run directory
+                    new_runs_dir = str(Run_dir + 'Base/' + mod_lab + '_' + peri_lab + '/' + 'wepp/')
+
+                    #Make new directories
+                    os.makedirs(new_runs_dir)
+
+                    #copy base_wepp directories/files into new baseline run directory
+                    copy_tree(base_wepp, new_runs_dir)
+
+
+                if peri_lab == '59' or peri_lab == '99':
+                    
+                    for man in man_labs:
+                        
+                        ### Create path to hillslope directory
+                        new_runs_dir_f = str(Run_dir + man + '/' + mod_lab + '_' + peri_lab + '/' + 'wepp/')
+                        
+                        # Make new directories
+                        os.makedirs(new_runs_dir_f)
+
+                        #copy base_wepp directories/files into new baseline run directory
+                        copy_tree(base_wepp, new_runs_dir_f)
+
+    print('Creating Baseline and Future WEPP Run directories...')             
+    create_dirs()

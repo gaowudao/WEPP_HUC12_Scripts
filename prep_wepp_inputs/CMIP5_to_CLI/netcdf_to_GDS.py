@@ -337,21 +337,4 @@ def netcdf_to_GDS(netcdf_dir, var_cols, proj_names, num_locs, proj_num, dwnsc_ty
 
     #Run to_GDS_file function                
     to_GDS_file(prep_dic)
-    
-#Set up input parameters for netcdf_to_GDS function and run for each downscaling type
-LOCA_netcdf = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1\\netcdf\\LOCA\\'
-BCCA_netcdf ='C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1\\netcdf\\BCCA\\'
-
-LOCA_cols = ['lat', 'lon', 'projection', 'time']
-BCCA_cols = ['latitude', 'longitude', 'projection', 'time']
-
-LOCA_projs = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1\\netcdf\\LOCA_projections_Short.txt'
-BCCA_projs = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1\\netcdf\\BCCA_projections_Short.txt'
-
-LOCA_GDS_path = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1\\GDS\\Test_Runs\\'     
-BCCA_GDS_path = 'C:\\Users\\Garner\\Soil_Erosion_Project\\WEPP_PRWs\\GO1\\GDS\\Test_Runs\\' 
-
-
-netcdf_to_GDS(LOCA_netcdf, LOCA_cols, LOCA_projs, 9, 6, 'LOCA', LOCA_GDS_path)
-netcdf_to_GDS(BCCA_netcdf, BCCA_cols, BCCA_projs, 3, 6, 'BCCA', BCCA_GDS_path)
 
