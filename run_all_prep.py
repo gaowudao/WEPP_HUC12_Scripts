@@ -4,7 +4,7 @@ from prep_wepp_inputs.CMIP5_to_CLI.Generate_calibrated_cli_files import gen_cli_
 from prep_wepp_inputs.Prep_sol_slp_man_files import prep_input_files
 from prep_wepp_inputs.Assign_Cli_Files import assign_cli_files
 
-def run_all_prep(HUC12_path, ftp_lst, HUC12_name, num_locs, proj_num, obs_cli_xlsx,\
+def run_all_prep(HUC12_path, ftp_lst, HUC12_name, proj_num, obs_cli_xlsx,\
                  wshed_ID, LOCA_labs, BCCA_labs, man_labs, periods):
     '''
     Combines functions from scripts in CMIP5_to_CLI folder to produce fully calibrated 
@@ -22,10 +22,9 @@ def run_all_prep(HUC12_path, ftp_lst, HUC12_name, num_locs, proj_num, obs_cli_xl
 
     proj_names = path to text file with climate projection names
 
-    num_locs = number of modeled areas in netcdf - only need to specify if equal to 1 
-    or greater than 1. If greater than 1, input = 2 or any other integer greater than 1. 
+    num_locs = number of modeled areas in netcdf
 
-    proj_num = number of projections/models in netcdf (same numbering system as num_locs)
+    proj_num = number of projections/models in netcdf
 
     obs_cli_xlsx = excel spreadsheet with observed climate data. See read_me for formatting
 
@@ -34,7 +33,7 @@ def run_all_prep(HUC12_path, ftp_lst, HUC12_name, num_locs, proj_num, obs_cli_xl
     periods = list of time periods as integers 
     '''
 
-    def netcdf_calcli(dwnsc_type,ftp_num,var_cols):
+    def netcdf_calcli(dwnsc_type, ftp_num, var_cols, num_locs):
         '''
         Runs functions that extract netcdf files from ftp ID and produce a fully
         calibrated .cli file
@@ -61,8 +60,8 @@ def run_all_prep(HUC12_path, ftp_lst, HUC12_name, num_locs, proj_num, obs_cli_xl
 
     #netCDF extractions come with different column labels for LOCA and BCCA,
     #so they must be defined beforehand
-    netcdf_calcli('LOCA', 1, LOCA_cols)
-    netcdf_calcli('BCCA', 0, BCCA_cols)
+    netcdf_calcli('LOCA', 1, LOCA_cols, 9)
+    netcdf_calcli('BCCA', 0, BCCA_cols,5)
 
     #Set up paths to the base runs directory (includes soil, slope, and management 
     #files), the parent directory for all model runs (Run_dir), and the excel file
@@ -114,8 +113,8 @@ man_labs = ['CC', 'CT', 'Comb', 'Per', 'NC']
 periods = ['19', '59', '99']
 
 #Define path to HUC12 watershed directory
-HUC12_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/RO1/'
+HUC12_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/'
 
 ############# RUN netCDF_to_calcli ##################
-run_all_prep(HUC12_path, RO1_ftp_lst, 'RO1', 2, 2,'RO1_MnDNR_Obs.xlsx',\
-             RO1_ID, LOCA_model_labs, BCCA_model_labs, man_labs, periods)
+run_all_prep(HUC12_path, ST1_ftp_lst, 'ST1', 6,'ST1_MnDNR_Obs.xlsx',\
+             ST1_ID, LOCA_model_labs, BCCA_model_labs, man_labs, periods)
