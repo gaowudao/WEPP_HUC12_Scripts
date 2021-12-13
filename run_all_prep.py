@@ -4,7 +4,7 @@ from prep_wepp_inputs.CMIP5_to_CLI.Generate_calibrated_cli_files import gen_cli_
 from prep_wepp_inputs.Prep_sol_slp_man_files import prep_input_files
 from prep_wepp_inputs.Assign_Cli_Files import assign_cli_files
 
-def run_all_prep(HUC12_path, ftp_lst, HUC12_name, proj_num, obs_cli_xlsx,\
+def run_prep(HUC12_path, ftp_lst, HUC12_name, proj_num, obs_cli_xlsx,\
                  wshed_ID, LOCA_labs, BCCA_labs, man_labs, periods):
     '''
     Combines functions from scripts in CMIP5_to_CLI folder to produce fully calibrated 
@@ -116,5 +116,5 @@ periods = ['19', '59', '99']
 HUC12_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/'
 
 ############# RUN netCDF_to_calcli ##################
-run_all_prep(HUC12_path, ST1_ftp_lst, 'ST1', 6,'ST1_MnDNR_Obs.xlsx',\
+run_prep(HUC12_path, ST1_ftp_lst, 'ST1', 6,'ST1_MnDNR_Obs.xlsx',\
              ST1_ID, LOCA_model_labs, BCCA_model_labs, man_labs, periods)

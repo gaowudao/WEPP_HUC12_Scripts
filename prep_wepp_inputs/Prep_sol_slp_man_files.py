@@ -20,7 +20,7 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out, Run_dir, model_labs, man_
     Run_dir = path to Runs directory (HUC12_path/Runs/) which contains the sub-directories
     for each management and climate scenario combination 
 
-    man/cli_labs = list of management and climate scenario labels as strings
+    man/model_labs = list of management and climate scenario labels as strings
 
     periods = list of time periods as integers 
     
