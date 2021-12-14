@@ -1,11 +1,3 @@
-model_labels = ['L1','L2','L3','L4','L5','L6',\
-                'B1','B2','B3','B4','B5','B6']
-target_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1_DEP/Runs/wepp/runs/'
-source_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1_DEP/Runs/wepp/runs/'
-
-DEP_DF_lst = ['p14', 'p26', 'p66', 'p70', 'p374']
-
-
 def select_subset_hs(model_labels, source_dir, target_dir, hillslopes):
     '''
     Moves a subset of hillslopes from the main scenario directory and copies them
