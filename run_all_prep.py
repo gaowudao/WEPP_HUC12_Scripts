@@ -28,7 +28,7 @@ def run_prep(HUC12_path, ftp_lst, HUC12_name, proj_num, obs_cli_xlsx,\
 
     obs_cli_xlsx = excel spreadsheet with observed climate data. See read_me for formatting
 
-    man/cli_labs = list of management and climate scenario labels as strings
+    man,LOCA,BCCA + _labs = list of management and climate scenario labels as strings
 
     periods = list of time periods as integers 
     '''
@@ -53,7 +53,7 @@ def run_prep(HUC12_path, ftp_lst, HUC12_name, proj_num, obs_cli_xlsx,\
         #calibrated climate files
         extract_netcdf(ftp_lst[ftp_num], netcdf_path, HUC12_name)
         netcdf_to_GDS(netcdf_path, var_cols, model_IDs, num_locs, proj_num, dwnsc_type, GDS_path)
-        gen_cli_file(GDS_path, HUC12_name, uncal_path, obs_path, '19', '59', par_path)
+        gen_cli_file(GDS_path, HUC12_name, uncal_path, obs_path, '19', '59', par_path, True)
     
     LOCA_cols = ['lat', 'lon', 'projection', 'time']
     BCCA_cols = ['latitude', 'longitude', 'projection', 'time']
@@ -87,8 +87,8 @@ def run_prep(HUC12_path, ftp_lst, HUC12_name, proj_num, obs_cli_xlsx,\
     BCCA_cli_path = str(HUC12_path + '/PAR/BCCA/')
 
     #Run assign_cli_files for each downscaling method
-    assign_cli_files(hill_coords, LOCA_cli_path, Run_dir, LOCA_labs, man_labs, periods, HUC12_name)
-    assign_cli_files(hill_coords, BCCA_cli_path, Run_dir, BCCA_labs, man_labs, periods, HUC12_name)
+    assign_cli_files(hill_coords, LOCA_cli_path, Run_dir, LOCA_labs, 'Base/', man_labs, periods, HUC12_name, None)
+    assign_cli_files(hill_coords, BCCA_cli_path, Run_dir, BCCA_labs, 'Base/', man_labs, periods, HUC12_name, None)
 
 
 

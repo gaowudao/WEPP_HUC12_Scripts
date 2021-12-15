@@ -2,13 +2,28 @@
 # coding: utf-8
 
 # In[1]:
-def assign_cli_files(coords_path, cli_path, Run_dir, model_labs, man_labs, periods, HUC12_name):
+def assign_cli_files(coords_path, cli_path, Run_dir, model_labs, base_name, man_labs, periods, HUC12_name, subset):
     '''
     Loads in GPS coordinates from .cli files, matches them with the closest hillslope coordinates,
     and then copies the .cli files to a directory under the name of the matched hillslope's ID. 
 
+    coords_path = path to excel file with hillslope IDs and their coordinates
+
     Run_dir and cli_dir = parent directories for where .cli files are placed (Run_dir)
-    and where base .cli_files are taken from (cli_dir)
+    and where base .cli_files are taken from (cli_dir
+
+    model_labs = climate model labels (short IDs for directory names)
+
+    base_name = name of baseline directory being using
+
+    man_labs = labels of management scenario directories
+
+    periods = list time period IDs in string format
+
+    HUC12_name = short ID of watershed/group of hillslopes
+
+    subset = 'None' if assigning .cli files to all hillslopes in the wshed directory, otherwise variable 
+    should equal a subset list of hillslopes
     '''
 
     import shutil, os
@@ -73,8 +88,11 @@ def assign_cli_files(coords_path, cli_path, Run_dir, model_labs, man_labs, perio
 
         cli_locs_df = dataframe with unique lat/lon values for .cli files
         '''
-        
-        hill_df = hillslope_coords
+        if subset == None:
+            hill_df = hillslope_coords
+
+        if type(subset) == list:
+            hill_df = hillslope_coords.loc[hillslope_coords['ID'].isin(subset)]
         
         for ID, lat, lon in zip(hill_df['ID'], hill_df['lat'], hill_df['lon']):
 
@@ -105,7 +123,7 @@ def assign_cli_files(coords_path, cli_path, Run_dir, model_labs, man_labs, perio
                         cli_file = str(cli_path + HUC12_name + '_' + mod_lab + cli_loc_lab + peri_lab + '.cli')
 
                         ### Create path to hillslope directory
-                        hill_dir = str(Run_dir + 'Base/' + mod_lab + '_' + peri_lab + '/' + 'wepp/' + 'runs/')
+                        hill_dir = str(Run_dir + base_name + mod_lab + '_' + peri_lab + '/' + 'wepp/' + 'runs/')
 
                         ### Create new file name
                         new_cli_file = str(hill_dir + 'p' + str(ID) + '.cli')
@@ -129,8 +147,3 @@ def assign_cli_files(coords_path, cli_path, Run_dir, model_labs, man_labs, perio
         
     print('Assigning .cli files to directories based on hillslope coordinates...')
     assign_files(uni_locs)
-# In[ ]:
-
-
-
-

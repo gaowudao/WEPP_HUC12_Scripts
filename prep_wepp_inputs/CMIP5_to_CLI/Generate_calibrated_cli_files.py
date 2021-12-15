@@ -4,7 +4,7 @@
 # In[1]:
 
 
-def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par_path):
+def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par_path, future):
     '''
     Runs a GDS file through GenStPar to create an uncalibrated .TOP file which
     is then calibrated using observed data from the MnDNR. A .PAR file is created
@@ -30,6 +30,10 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
     
     base_id = Id for baseline time period. Generally set as '19' to indicate the 1965-2019 
     time period
+
+    future = True or False input. If variable is True, then future .cli files are present and
+    will be calibrated. If false, there are no future .cli files in the directory. Set the variable
+    to True/False depending on the time periods present. 
     '''
     
     import shutil, os
@@ -226,185 +230,186 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
     #run create_cal_top     
     create_cal_top()
     
-    
-    
-    ########  Calibrate future .top files  #########
+    #Only calibrate future .cli files if they are present
+    if future == True:
 
-    def load_base_top(output_dic, cal_uncal):
-        '''
-        Loops through set of baseline .top files and puts them into a dictionary
-        of dataframes so that the variables are accessible for adjustments/calculations
+        ########  Calibrate future .top files  #########
 
-        cal_uncal = string to guide the process of loading in files (see if
-        statements)
-        '''
-
-        def Fix_100deg_vals(file_lst):
+        def load_base_top(output_dic, cal_uncal):
             '''
-            GenStPar Program does not limit the length of values so any temperature over 100 degF 
-            will not be separated from the preceeding value. This causes problems when loading in 
-            the data and calibrating the maximum temperature. Normally happens in the 2069-99 time 
-            period
+            Loops through set of baseline .top files and puts them into a dictionary
+            of dataframes so that the variables are accessible for adjustments/calculations
 
-            To fix this, read in the .top files and edit 
-
-            file_lst = list of .top files
+            cal_uncal = string to guide the process of loading in files (see if
+            statements)
             '''
-            for top_file in file_lst:
-                with open(str(top_dir + top_file), 'r+') as file:
-                    lines = file.readlines() #Read in .top file lines
-                    tmax_line = lines[8].split() #Select tmax line (always 8) and split values into list
-                    #if a value in the new list has a length > 5, separate those values.
-                    for count,t_val in enumerate(tmax_line):
-                        if len(t_val) > 8:
-                            first_val = t_val[0:5]
-                            second_val = t_val[5::] #Usually the tmax value with 100+ degrees
-                            round(float(second_val), 1) #round the 100+ degree value to only have one decimal
-                            #reassign separated values to tmax_line
-                            tmax_line[count] = first_val
-                            tmax_line.insert(int(count+1), str(second_val))
-                            print(tmax_line)
-                    lines[8] = str(' ' + ' '.join(tmax_line) + '\n')
 
+            def Fix_100deg_vals(file_lst):
+                '''
+                GenStPar Program does not limit the length of values so any temperature over 100 degF 
+                will not be separated from the preceeding value. This causes problems when loading in 
+                the data and calibrating the maximum temperature. Normally happens in the 2069-99 time 
+                period
+
+                To fix this, read in the .top files and edit 
+
+                file_lst = list of .top files
+                '''
+                for top_file in file_lst:
+                    with open(str(top_dir + top_file), 'r+') as file:
+                        lines = file.readlines() #Read in .top file lines
+                        tmax_line = lines[8].split() #Select tmax line (always 8) and split values into list
+                        #if a value in the new list has a length > 5, separate those values.
+                        for count,t_val in enumerate(tmax_line):
+                            if len(t_val) > 8:
+                                first_val = t_val[0:5]
+                                second_val = t_val[5::] #Usually the tmax value with 100+ degrees
+                                round(float(second_val), 1) #round the 100+ degree value to only have one decimal
+                                #reassign separated values to tmax_line
+                                tmax_line[count] = first_val
+                                tmax_line.insert(int(count+1), str(second_val))
+                                print(tmax_line)
+                        lines[8] = str(' ' + ' '.join(tmax_line) + '\n')
+
+                        # move file pointer to the beginning of a file
+                        file.seek(0)
+                        # truncate the file
+                        file.truncate()
+                        #write new lines
+                        file.writelines(lines)
+
+            if cal_uncal == 'cal':
+                # Load in calibrated basline files
+                top_files = [x for x in os.listdir(top_path) if x.endswith('19.top')]
+                top_dir = top_path
+
+                #read in .top files for 2069-99 period from 'calibrated' directory so that
+                #any 100+ deg days can be fixed in "Fix_100deg_vals" function
+                top_files_99 = [x for x in os.listdir(top_path) if x.endswith('99.top')]
+                Fix_100deg_vals(top_files_99)
+
+            if cal_uncal == 'uncal':
+                # Load in all uncalibrated files
+                top_files = [x for x in os.listdir(uncal_path) if x.endswith('.top')]
+                top_dir = uncal_path
+                Fix_100deg_vals(top_files)
+
+
+            for top_file in top_files:
+
+                Months = [1,2,3,4,5,6,7,8,9,10,11,12]
+
+                # Read in .top files to dataframes
+                top_data = pd.read_csv(str(top_dir + top_file), skiprows = 3, sep = '\s+', header=None, engine = 'python')
+
+                #Create temporary dataframes that drop necessary NaN columns for the respective variables
+                Pwd_i = top_data.drop([12,13], axis=1)
+                Pwd_i.columns = [Months]
+                Pww_i = top_data.drop([12,13], axis=1)
+                Pww_i.columns = [Months]
+                meanP_i = top_data.drop([0,13], axis=1)
+                meanP_i.columns = [Months]
+
+                #Create dataframe of variables by month
+                df = pd.DataFrame(data = {'P(W|D)':Pwd_i.loc['P(W|D)'], 'P(W|W)':Pww_i.loc['P(W|W)'],\
+                                        'Mean_P':meanP_i.loc['MEAN'], 'SKEW_P':meanP_i.loc['SKEW'],\
+                                        'TMAX':meanP_i.loc['TMAX'], 'TMIN':meanP_i.loc['TMIN'],\
+                                        'SD TMAX':meanP_i.iloc[7], 'SD TMIN':meanP_i.iloc[8],\
+                                        'Months':Months})
+                df.set_index('Months', inplace =True)
+
+                #Calculate P(w)
+                one_min_pww = 1 - df['P(W|W)'].astype(float)
+                df['P(W)'] = df['P(W|D)'].astype(float) / (one_min_pww + df['P(W|D)'].astype(float))
+
+                #Assign to dictionary with model/location name
+                output_dic[top_file[:-4]] = df
+
+        # Set up directories and dictionaries for running top_to_dic function
+        uncal_monthly_vars = {}  
+        cal_monthly_vars = {}
+
+        #Run top_to_dic for uncalibrated and calibrated .top files
+        load_base_top(cal_monthly_vars, 'cal')
+        load_base_top(uncal_monthly_vars, 'uncal')
+
+        
+        def calibrate_fut_top(mod, base, uncal_base_dic, cal_base_dic, fut_top_path):
+            '''
+            Calibrate future .top files using uncalibrated and calibrated baseline .top files
+            '''
+
+            fut_lab_lst = [str(mod + '59'), str(mod + '99')]
+
+            #Define baseline uncalibrated and calibrated df's
+            uncal_base_df = uncal_base_dic[base].astype(float)
+            cal_base_df = cal_base_dic[base].astype(float)
+            
+            for fut_lab in fut_lab_lst:
+                #Define uncalibrated future df
+                uncal_fut_df = uncal_base_dic[fut_lab].astype(float)
+
+                #Perform calibration calculations
+
+                ##Monthly mean precip per event
+                cal_mean_P = abs(uncal_fut_df['Mean_P'] - uncal_base_df['Mean_P']) + cal_base_df['Mean_P']
+
+                ##Monthly mean P(W|W)
+                cal_PWW = abs(uncal_fut_df['P(W|W)'] - uncal_base_df['P(W|W)']) + cal_base_df['P(W|W)']
+
+                cal_SKEWP = abs(uncal_fut_df['SKEW_P'] - uncal_base_df['SKEW_P']) + cal_base_df['SKEW_P']
+
+                cal_tmax = abs(uncal_fut_df['TMAX'] - uncal_base_df['TMAX']) + cal_base_df['TMAX']
+
+                cal_tmin = abs(uncal_fut_df['TMIN'] - uncal_base_df['TMIN']) + cal_base_df['TMIN']
+
+                cal_sdmax = abs(uncal_fut_df['SD TMAX'] - uncal_base_df['SD TMAX']) + cal_base_df['SD TMAX']
+
+                cal_sdmin = abs(uncal_fut_df['SD TMIN'] - uncal_base_df['SD TMIN']) + cal_base_df['SD TMIN']
+
+
+                #Substitute calibrated values into uncalibrated future .top files
+                with open(str(fut_top_path+fut_lab+'.top'), 'r+') as file:
+                    lines = file.readlines()
+
+                    #Turn dataframe back to string and then rewrite to file 
+                    #Using create_out_string function from before
+                    new_meanP = create_out_string(cal_mean_P, ' MEAN P  ')
+                    new_PWW = create_out_string(cal_PWW, ' P(W|W)  ')
+                    new_skewp = create_out_string(cal_SKEWP, ' SKEW P  ')
+                    new_tmax = create_out_string(cal_tmax, ' TMAX AV ')
+                    new_tmin = create_out_string(cal_tmin, ' TMIN AV ')
+                    new_sdmax = create_out_string(cal_sdmax, ' SD TMAX ')
+                    new_sdmin = create_out_string(cal_sdmin, ' SD TMIN ')
+                    
                     # move file pointer to the beginning of a file
                     file.seek(0)
                     # truncate the file
                     file.truncate()
-                    #write new lines
-                    file.writelines(lines)
 
-        if cal_uncal == 'cal':
-            # Load in calibrated basline files
-            top_files = [x for x in os.listdir(top_path) if x.endswith('19.top')]
-            top_dir = top_path
-
-            #read in .top files for 2069-99 period from 'calibrated' directory so that
-            #any 100+ deg days can be fixed in "Fix_100deg_vals" function
-            top_files_99 = [x for x in os.listdir(top_path) if x.endswith('99.top')]
-            Fix_100deg_vals(top_files_99)
-
-        if cal_uncal == 'uncal':
-            # Load in all uncalibrated files
-            top_files = [x for x in os.listdir(uncal_path) if x.endswith('.top')]
-            top_dir = uncal_path
-            Fix_100deg_vals(top_files)
+                    file.writelines(lines[0:3])
+                    file.writelines(new_meanP + '\n')
+                    file.writelines(lines[4])
+                    file.writelines(new_skewp + '\n')
+                    file.writelines(new_PWW + '\n')
+                    file.writelines(lines[7])
+                    file.writelines(new_tmax + '\n')
+                    file.writelines(new_tmin + '\n')
+                    file.writelines(new_sdmax + '\n')
+                    file.writelines(new_sdmin + '\n')
+                    file.close()
 
 
-        for top_file in top_files:
-
-            Months = [1,2,3,4,5,6,7,8,9,10,11,12]
-
-            # Read in .top files to dataframes
-            top_data = pd.read_csv(str(top_dir + top_file), skiprows = 3, sep = '\s+', header=None, engine = 'python')
-
-            #Create temporary dataframes that drop necessary NaN columns for the respective variables
-            Pwd_i = top_data.drop([12,13], axis=1)
-            Pwd_i.columns = [Months]
-            Pww_i = top_data.drop([12,13], axis=1)
-            Pww_i.columns = [Months]
-            meanP_i = top_data.drop([0,13], axis=1)
-            meanP_i.columns = [Months]
-
-            #Create dataframe of variables by month
-            df = pd.DataFrame(data = {'P(W|D)':Pwd_i.loc['P(W|D)'], 'P(W|W)':Pww_i.loc['P(W|W)'],\
-                                      'Mean_P':meanP_i.loc['MEAN'], 'SKEW_P':meanP_i.loc['SKEW'],\
-                                      'TMAX':meanP_i.loc['TMAX'], 'TMIN':meanP_i.loc['TMIN'],\
-                                      'SD TMAX':meanP_i.iloc[7], 'SD TMIN':meanP_i.iloc[8],\
-                                      'Months':Months})
-            df.set_index('Months', inplace =True)
-
-            #Calculate P(w)
-            one_min_pww = 1 - df['P(W|W)'].astype(float)
-            df['P(W)'] = df['P(W|D)'].astype(float) / (one_min_pww + df['P(W|D)'].astype(float))
-
-            #Assign to dictionary with model/location name
-            output_dic[top_file[:-4]] = df
-
-    # Set up directories and dictionaries for running top_to_dic function
-    uncal_monthly_vars = {}  
-    cal_monthly_vars = {}
-
-    #Run top_to_dic for uncalibrated and calibrated .top files
-    load_base_top(cal_monthly_vars, 'cal')
-    load_base_top(uncal_monthly_vars, 'uncal')
-
-    
-    def calibrate_fut_top(mod, base, uncal_base_dic, cal_base_dic, fut_top_path):
-        '''
-        Calibrate future .top files using uncalibrated and calibrated baseline .top files
-        '''
-
-        fut_lab_lst = [str(mod + '59'), str(mod + '99')]
-
-        #Define baseline uncalibrated and calibrated df's
-        uncal_base_df = uncal_base_dic[base].astype(float)
-        cal_base_df = cal_base_dic[base].astype(float)
+        # Get list of name/method/location/model label combinations without time period label
+        mod_tempor_lst = [x for x in uncal_monthly_vars if x.startswith(site_name) and x.endswith((str(fut_id)))]
+        mod_lst = []
+        for tempor_mod in mod_tempor_lst:
+            mod_lst.append(tempor_mod.replace(fut_id, ''))
         
-        for fut_lab in fut_lab_lst:
-            #Define uncalibrated future df
-            uncal_fut_df = uncal_base_dic[fut_lab].astype(float)
-
-            #Perform calibration calculations
-
-            ##Monthly mean precip per event
-            cal_mean_P = abs(uncal_fut_df['Mean_P'] - uncal_base_df['Mean_P']) + cal_base_df['Mean_P']
-
-            ##Monthly mean P(W|W)
-            cal_PWW = abs(uncal_fut_df['P(W|W)'] - uncal_base_df['P(W|W)']) + cal_base_df['P(W|W)']
-
-            cal_SKEWP = abs(uncal_fut_df['SKEW_P'] - uncal_base_df['SKEW_P']) + cal_base_df['SKEW_P']
-
-            cal_tmax = abs(uncal_fut_df['TMAX'] - uncal_base_df['TMAX']) + cal_base_df['TMAX']
-
-            cal_tmin = abs(uncal_fut_df['TMIN'] - uncal_base_df['TMIN']) + cal_base_df['TMIN']
-
-            cal_sdmax = abs(uncal_fut_df['SD TMAX'] - uncal_base_df['SD TMAX']) + cal_base_df['SD TMAX']
-
-            cal_sdmin = abs(uncal_fut_df['SD TMIN'] - uncal_base_df['SD TMIN']) + cal_base_df['SD TMIN']
-
-
-            #Substitute calibrated values into uncalibrated future .top files
-            with open(str(fut_top_path+fut_lab+'.top'), 'r+') as file:
-                lines = file.readlines()
-
-                #Turn dataframe back to string and then rewrite to file 
-                #Using create_out_string function from before
-                new_meanP = create_out_string(cal_mean_P, ' MEAN P  ')
-                new_PWW = create_out_string(cal_PWW, ' P(W|W)  ')
-                new_skewp = create_out_string(cal_SKEWP, ' SKEW P  ')
-                new_tmax = create_out_string(cal_tmax, ' TMAX AV ')
-                new_tmin = create_out_string(cal_tmin, ' TMIN AV ')
-                new_sdmax = create_out_string(cal_sdmax, ' SD TMAX ')
-                new_sdmin = create_out_string(cal_sdmin, ' SD TMIN ')
-                
-                # move file pointer to the beginning of a file
-                file.seek(0)
-                # truncate the file
-                file.truncate()
-
-                file.writelines(lines[0:3])
-                file.writelines(new_meanP + '\n')
-                file.writelines(lines[4])
-                file.writelines(new_skewp + '\n')
-                file.writelines(new_PWW + '\n')
-                file.writelines(lines[7])
-                file.writelines(new_tmax + '\n')
-                file.writelines(new_tmin + '\n')
-                file.writelines(new_sdmax + '\n')
-                file.writelines(new_sdmin + '\n')
-                file.close()
-
-
-    # Get list of name/method/location/model label combinations without time period label
-    mod_tempor_lst = [x for x in uncal_monthly_vars if x.startswith(site_name) and x.endswith((str(fut_id)))]
-    mod_lst = []
-    for tempor_mod in mod_tempor_lst:
-        mod_lst.append(tempor_mod.replace(fut_id, ''))
-    
-    print('Calibrating future .top files...')
-    # Run calibrate_fut_top for each method/location/model combo
-    for mod in mod_lst:  
-        calibrate_fut_top(mod, str(mod+'19'), uncal_monthly_vars, cal_monthly_vars, top_path)
+        print('Calibrating future .top files...')
+        # Run calibrate_fut_top for each method/location/model combo
+        for mod in mod_lst:  
+            calibrate_fut_top(mod, str(mod+'19'), uncal_monthly_vars, cal_monthly_vars, top_path)
         
         
         
