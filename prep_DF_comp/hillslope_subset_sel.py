@@ -16,10 +16,10 @@ def select_subset_hs(model_labels, source_dir, Run_dir, hillslopes):
     for mod_lab in model_labels:
 
         #Set path to target directory (subset of larger WEPP hillslopes)
-        DEP_DF_dir = str(Run_dir + 'DF_comp/' + mod_lab + '_19' + '/wepp/' + 'runs/')
+        DEP_DF_dir = str(Run_dir + 'DF_Comp/' + mod_lab + '_19' + '/wepp/' + 'runs/')
 
         #Set path for output files 
-        DEP_DF_out_dir = str(Run_dir + 'DF_comp/' + mod_lab + '_19' + '/wepp/' + 'outputs/')
+        DEP_DF_out_dir = str(Run_dir + 'DF_Comp/' + mod_lab + '_19' + '/wepp/' + 'output/')
         
         #create DEP_DF_dir and out_dir
         os.makedirs(DEP_DF_dir)
@@ -35,4 +35,11 @@ def select_subset_hs(model_labels, source_dir, Run_dir, hillslopes):
                 
                 #copy selected file to new subset directory
                 shutil.copy(source_file,subset_file)
+
+            #repeat for frost and snow files
+            if file == 'frost.txt' or file == 'snow.txt':
+                source_file = str(source_dir + file)
+                subset_file = str(DEP_DF_dir + file)
+                shutil.copy(source_file,subset_file)
+
 

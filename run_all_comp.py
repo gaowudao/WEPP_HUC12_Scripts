@@ -77,8 +77,8 @@ def run_comp_prep(HUC12_path, subset_ID, years, obs_cli_xlsx, HUC12_name, LOCA_l
     hill_coords = str(HUC12_path + 'hillslope_coords.xlsx')
 
     #Run assign_cli_files for each downscaling method
-    assign_cli_files(hill_coords, LOCA_cli_path, Run_dir, LOCA_labs, 'DF_Comp/', [], '19', HUC12_name, hill_nums)
-    assign_cli_files(hill_coords, BCCA_cli_path, Run_dir, BCCA_labs, 'DF_Comp/', [], '19', HUC12_name, hill_nums)
+    assign_cli_files(hill_coords, LOCA_cli_path, Run_dir, LOCA_labs, 'DF_Comp/', [], ['19'], HUC12_name, hill_nums)
+    assign_cli_files(hill_coords, BCCA_cli_path, Run_dir, BCCA_labs, 'DF_Comp/', [], ['19'], HUC12_name, hill_nums)
 
 
 #Define path to HUC12 watershed directory and subset of years 
@@ -89,7 +89,7 @@ BCCA_labs = ['B1','B2','B3','B4','B5','B6']
 hillslopes = ['p157', 'p221']
 hill_nums = [157, 221]
 
-run_comp_prep(HUC12_path, '_sub', years, 'BE1_MnDNR_Obs_1216.xlsx', 'BE1', LOCA_labs, BCCA_labs, hillslopes, hill_nums)
+run_comp_prep(HUC12_path, '_sub', years, 'BE1_MnDNR_Obs_sub.xlsx', 'BE1', LOCA_labs, BCCA_labs, hillslopes, hill_nums)
 
 #Define path to wepppy windows bootstrap scripts directory
 wepppy_win_dir = 'C:/Users/Garner/Soil_Erosion_Project/wepppy-win-bootstrap-master/scripts'
@@ -97,5 +97,5 @@ wepppy_win_dir = 'C:/Users/Garner/Soil_Erosion_Project/wepppy-win-bootstrap-mast
 model_labs = ['L1','L2','L3','L4','L5','L6',\
               'B1','B2','B3','B4','B5','B6']
 
-scen_dir = str(HUC12_path + 'Runs/DF_comp/')
+scen_dir = str(HUC12_path + 'Runs/DF_Comp/')
 run_wepp(wepppy_win_dir, scen_dir, model_labs)
