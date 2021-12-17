@@ -357,7 +357,7 @@ def gen_cli_file(top_path, site_name, uncal_path, obs_path, base_id, fut_id, par
                 ##Monthly mean P(W|W)
                 cal_PWW = abs(uncal_fut_df['P(W|W)'] - uncal_base_df['P(W|W)']) + cal_base_df['P(W|W)']
 
-                cal_SKEWP = abs(uncal_fut_df['SKEW_P'] - uncal_base_df['SKEW_P']) + cal_base_df['SKEW_P']
+                cal_SKEWP = (abs(uncal_fut_df['SKEW_P'] - uncal_base_df['SKEW_P']) + cal_base_df['SKEW_P']).astype(float).clip(0,4.3)
 
                 cal_tmax = abs(uncal_fut_df['TMAX'] - uncal_base_df['TMAX']) + cal_base_df['TMAX']
 

@@ -82,17 +82,17 @@ def run_comp_prep(HUC12_path, subset_ID, years, obs_cli_xlsx, HUC12_name, LOCA_l
 
 
 #Define path to HUC12 watershed directory and subset of years 
-HUC12_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/'
-years = ['11','12','13','14','15','16','17']
+HUC12_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/BE1/'
+years = ['12','13','14','15','16']
 LOCA_labs = ['L1','L2','L3','L4','L5','L6']
 BCCA_labs = ['B1','B2','B3','B4','B5','B6']
-hillslopes = ['p90']
-hill_nums = [90]
+BE1_hills = ['p157', 'p221']
+BE1_hill_nums = [157, 221]
 
-run_comp_prep(HUC12_path, '_sub', years, 'ST1_MnDNR_Obs_sub.xlsx', 'ST1', LOCA_labs, BCCA_labs, hillslopes, hill_nums)
+run_comp_prep(HUC12_path, '_sub', years, 'BE1_MnDNR_Obs_sub.xlsx', 'BE1', LOCA_labs, BCCA_labs, BE1_hills, BE1_hill_nums)
 
 #Define path to wepppy windows bootstrap scripts directory
-wepppy_win_dir = 'C:/Users/Garner/Soil_Erosion_Project/wepppy-win-bootstrap-master/scripts'
+wepppy_win_dir = 'E:/Soil_Erosion_Project/wepppy-win-bootstrap-master/scripts'
 
 model_labs = ['L1','L2','L3','L4','L5','L6',\
               'B1','B2','B3','B4','B5','B6']
