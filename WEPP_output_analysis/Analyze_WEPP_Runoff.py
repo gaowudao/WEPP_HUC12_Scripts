@@ -93,7 +93,7 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
 
             #Perform groupby on dataframes to calculate total monthly
             # events and RO for the individual hillslope
-            HS_month_events =ind_crop.groupby('Month')['RO'].count() / len(crop_yrs)
+            HS_month_events = ind_crop.groupby('Month')['RO'].count() / len(crop_yrs)
             HS_month_RO = ind_crop.groupby('Month')['RO'].sum() / len(crop_yrs)
 
             HS_month_comb = pd.DataFrame({'RO':HS_month_RO, 'Total RO Events':HS_month_events})
