@@ -113,10 +113,10 @@ man_labs = ['CC', 'CT', 'Comb', 'Per', 'NC']
 periods = ['19', '59', '99']
 
 #Define path to HUC12 watershed directory
-HUC12_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/BE1/'
+HUC12_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/RO1/'
 
 ############# RUN netCDF_to_calcli ##################
-run_prep(HUC12_path, BE1_ftp_lst, 'BE1', 6,'BE1_MnDNR_Obs.xlsx',\
-             BE1_ID, LOCA_model_labs, BCCA_model_labs, man_labs, periods)
+run_prep(HUC12_path, RO1_ftp_lst, 'RO1', 6,'RO1_MnDNR_Obs.xlsx',\
+             RO1_ID, LOCA_model_labs, BCCA_model_labs, man_labs, periods)
 
 

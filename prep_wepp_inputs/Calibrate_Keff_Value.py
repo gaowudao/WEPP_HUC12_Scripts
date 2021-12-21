@@ -38,8 +38,21 @@ def edit_Keff_val(mod_labs, scen_dir, scale_val):
                 find_key = '0.750000' # Find 'Line 4' for each OFE
 
                 if find_key in line:
-                    new_line = str(line[:-9] + str(round(float(line[-9::])*scale_val, 6)) + '\n')
-                    lines[num] = new_line
+
+                    Keff = round(float(line[-9::]), 6)
+
+                    if Keff <= 2:
+
+                        new_line = str(line[:-9] + str(round(float(line[-9::])*10, 6)) + '\n')
+                        lines[num] = new_line
+
+                    if Keff > 2 and Keff <= 7:
+
+                        new_line = str(line[:-9] + str(round(float(line[-9::])*5, 6)) + '\n')
+                        lines[num] = new_line
+
+                    
+                    
 
             # move file pointer to the beginning of a file
             file.seek(0)
