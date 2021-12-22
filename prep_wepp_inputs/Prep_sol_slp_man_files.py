@@ -324,7 +324,7 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out, Run_dir, model_labs, man_
                     if '# Rotation 1: year 1 to 15\n' in lines:
                         #Find line that is the same in all files and use it as a reference point
                         start_line = lines.index('# Rotation 1: year 1 to 15\n')
-                    if '# Rotation 1: year 1 to 8' in lines:
+                    if '# Rotation 1: year 1 to 8\n' in lines:
                         start_line = lines.index('# Rotation 1: year 1 to 8\n')
 
                     #Set full rotation to new list of lines and repeat it four times
@@ -420,8 +420,8 @@ def prep_input_files(runs_dir, HUC12_ID, HUC12_xl_out, Run_dir, model_labs, man_
 
                 #write new lines
                 file.writelines(lines)
-    print('Scaling Keff value by 10...')
-    edit_Keff_val(10)
+    print('Scaling Keff value...')
+    edit_Keff_val(1)
 
     def create_dirs():
         '''

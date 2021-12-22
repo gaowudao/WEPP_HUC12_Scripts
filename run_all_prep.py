@@ -97,12 +97,14 @@ def run_prep(HUC12_path, ftp_lst, HUC12_name, proj_num, obs_cli_xlsx,\
 #Define ftp IDs. First ID in each list is BCCA and second is LOCA
 BE1_ftp_lst = ['202112031343Nr5d_n_1ybge3', '202112011141Nr5l_n_PB_INf']
 DO1_ftp_lst = ['202112011149Nr5d_n_DLYep4', '202112011154Nr5l_n_EMRSgN']
+GO1_ftp_lst = ['202112210935Nr5d_n_KFSh8l', '202112210934Nr5l_n_H2xfJA']
 RO1_ftp_lst = ['202112011146Nr5d_n_PDkd1q', '202112011146Nr5l_n_SLtbnG']
 ST1_ftp_lst = ['202112011100Nr5d_n_DtgiWu', '202112011054Nr5l_n_FMUb4i']
 
 #Define HUC12 IDs from DEP project 
 BE1_ID = '070200110305_'
 DO1_ID = '070400040109_'
+GO1_ID = '070400010601_'
 RO1_ID = '101702031504_'
 ST1_ID = '070102020303_'
 
@@ -113,10 +115,11 @@ man_labs = ['CC', 'CT', 'Comb', 'Per', 'NC']
 periods = ['19', '59', '99']
 
 #Define path to HUC12 watershed directory
-HUC12_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/RO1/'
+HUC12_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/GO1/'
 
 ############# RUN netCDF_to_calcli ##################
-run_prep(HUC12_path, RO1_ftp_lst, 'RO1', 6,'RO1_MnDNR_Obs.xlsx',\
-             RO1_ID, LOCA_model_labs, BCCA_model_labs, man_labs, periods)
+run_prep(HUC12_path, GO1_ftp_lst, 'GO1', 6,'GO1_MnDNR_Obs.xlsx',\
+             GO1_ID, LOCA_model_labs, BCCA_model_labs, man_labs, periods)
+
 
 

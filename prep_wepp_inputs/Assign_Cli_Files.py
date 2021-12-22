@@ -33,7 +33,7 @@ def assign_cli_files(coords_path, cli_path, Run_dir, model_labs, base_name, man_
 
     #Read in hillslope coordinates file to dataframe and rename columns
     hillslope_coords = pd.read_excel(coords_path)
-    hillslope_coords = hillslope_coords.rename(columns={'fpath': 'ID', 'LON': 'lon', 'LAT':'lat'})
+    hillslope_coords = hillslope_coords.rename(columns={'fpath': 'ID', 'lon': 'lon', 'lat':'lat'})
 
     def load_cli_latlon():
         '''

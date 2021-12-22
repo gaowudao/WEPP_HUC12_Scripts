@@ -77,7 +77,9 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
         in_hill_names = [x for x in os.listdir(run_files_dir) if x.endswith('.cli')]
 
 
-        ebe_col_list = ['Day', 'Month', 'Year', 'Precip', 'RO', 'IR-det',                        'Av-det', 'Mx-det', 'Point', 'Av-dep', 'Mx-dep',                        'Point_2', 'Sed-Del', 'ER']
+        ebe_col_list = ['Day', 'Month', 'Year', 'Precip', 'RO', 'IR-det',\
+                        'Av-det', 'Mx-det', 'Point', 'Av-dep', 'Mx-dep',\
+                        'Point_2', 'Sed-Del', 'ER']
 
         #Create lists for output dataframes
         WEPP_Events_lst = []

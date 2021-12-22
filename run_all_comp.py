@@ -82,20 +82,41 @@ def run_comp_prep(HUC12_path, subset_ID, years, obs_cli_xlsx, HUC12_name, LOCA_l
 
 
 #Define path to HUC12 watershed directory and subset of years 
-HUC12_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/BE1/'
-years = ['12','13','14','15','16']
 LOCA_labs = ['L1','L2','L3','L4','L5','L6']
 BCCA_labs = ['B1','B2','B3','B4','B5','B6']
-BE1_hills = ['p157', 'p221']
-BE1_hill_nums = [157, 221]
+model_labs = ['L1','L2','L3','L4','L5','L6',\
+                'B1','B2','B3','B4','B5','B6']
 
-run_comp_prep(HUC12_path, '_sub', years, 'BE1_MnDNR_Obs_sub.xlsx', 'BE1', LOCA_labs, BCCA_labs, BE1_hills, BE1_hill_nums)
+#Define wshed hillslopes
+BE1_hills = ['p157', 'p221']
+BE1_hill_nums = [157,221]
+BE1_years = ['12','13','14','15','16']
+
+DO1_hills = ['p206','p322']
+DO1_hill_nums = [206,322]
+DO1_years = ['13','14','15','16', '17', '18', '19']
+
+GO1_hills = ['p374']
+GO1_hill_nums = [374]
+GO1_years = ['11','12','13','14','15','16']
+
+RO1_hills = ['p77']
+RO1_hill_nums = [77]
+RO1_years = ['14','15','16', '17', '18', '19']
+
+ST1_hills = ['p90','p154']
+ST1_hill_nums = [90,154]
+ST1_years = ['11','12','13','14','15','16', '17']
+
+#Define path to each watershed
+HUC12_path = str('E:/Soil_Erosion_Project/WEPP_PRWs/ST1/')
+
+
+run_comp_prep(HUC12_path, '_sub', ST1_years, 'ST1_MnDNR_Obs_sub.xlsx',\
+             'ST1', LOCA_labs, BCCA_labs, ST1_hills, ST1_hill_nums)
+
 
 #Define path to wepppy windows bootstrap scripts directory
 wepppy_win_dir = 'E:/Soil_Erosion_Project/wepppy-win-bootstrap-master/scripts'
-
-model_labs = ['L1','L2','L3','L4','L5','L6',\
-              'B1','B2','B3','B4','B5','B6']
-
 scen_dir = str(HUC12_path + 'Runs/DF_Comp/')
 run_wepp(wepppy_win_dir, scen_dir, model_labs)
