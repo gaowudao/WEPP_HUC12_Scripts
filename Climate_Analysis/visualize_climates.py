@@ -1,6 +1,18 @@
 #%%
 def vis_climates(mod_rcps, HUC12_path, dwnsc_type, model_name, out_path, wshed):
     '''
+    Creates bar plots of seasonal baseline and future climate data including max/min temps,
+    average total precip, and three precipitation intensity variables
+
+
+    mod_rcps = rcp model labels (L1, L2, B1, B2, etc.), each climate model has two
+    rcp scenario labels that are part of their file directory tree
+
+    HUC12_path = path to watershed directory
+    dwnsc_type = LOCA or BCCA downscaling method
+    model_name = name of climate model being analyzed
+    out_path = path where figures are saved to (joined with HUC12_path)
+    wshed = watershed name ID ('GO1', 'DO1', etc.)
     '''
     
     import os
