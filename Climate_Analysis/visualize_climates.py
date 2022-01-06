@@ -21,6 +21,7 @@ def vis_climates(mod_rcps, HUC12_path, dwnsc_type, model_name, out_path, wshed):
     import matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    import matplotlib.axes as axs
 
     def get_cli_dfs(scen_dir, mod, period, years):
         '''

@@ -66,7 +66,7 @@ def run_comp_prep(HUC12_path, subset_ID, years, obs_cli_xlsx, HUC12_name, LOCA_l
         model_labs.append(mod)
 
     #move subset of hillslopes
-    select_subset_hs(model_labs, base_runs_dir, Run_dir, hillslopes)
+    select_subset_hs(model_labs, base_runs_dir, Run_dir, 'RG_Comp/',hillslopes)
 
 
     #Set path to LOCA and BCCA .cli files
@@ -77,15 +77,14 @@ def run_comp_prep(HUC12_path, subset_ID, years, obs_cli_xlsx, HUC12_name, LOCA_l
     hill_coords = str(HUC12_path + 'hillslope_coords.xlsx')
 
     #Run assign_cli_files for each downscaling method
-    assign_cli_files(hill_coords, LOCA_cli_path, Run_dir, LOCA_labs, 'DF_Comp/', [], ['19'], HUC12_name, hill_nums)
-    assign_cli_files(hill_coords, BCCA_cli_path, Run_dir, BCCA_labs, 'DF_Comp/', [], ['19'], HUC12_name, hill_nums)
+    assign_cli_files(hill_coords, LOCA_cli_path, Run_dir, LOCA_labs, 'RG_Comp/', [], ['19'], HUC12_name, hill_nums)
+    assign_cli_files(hill_coords, BCCA_cli_path, Run_dir, BCCA_labs, 'RG_Comp/', [], ['19'], HUC12_name, hill_nums)
 
 
 #Define path to HUC12 watershed directory and subset of years 
-LOCA_labs = ['L1','L2','L3','L4','L5','L6']
-BCCA_labs = ['B1','B2','B3','B4','B5','B6']
-model_labs = ['L1','L2','L3','L4','L5','L6',\
-                'B1','B2','B3','B4','B5','B6']
+LOCA_labs = ['L3','L4']
+BCCA_labs = ['B3','B4']
+model_labs = ['L3','L4','B3','B4']
 
 #Define wshed hillslopes
 BE1_hills = ['p157', 'p221']
@@ -112,11 +111,11 @@ ST1_years = ['11','12','13','14','15','16', '17']
 HUC12_path = str('E:/Soil_Erosion_Project/WEPP_PRWs/ST1/')
 
 
-run_comp_prep(HUC12_path, '_sub', ST1_years, 'ST1_MnDNR_Obs_sub.xlsx',\
+run_comp_prep(HUC12_path, '_RG', ST1_years, 'ST1_MnDNR_Obs_RG.xlsx',\
              'ST1', LOCA_labs, BCCA_labs, ST1_hills, ST1_hill_nums)
 
 
 #Define path to wepppy windows bootstrap scripts directory
 wepppy_win_dir = 'E:/Soil_Erosion_Project/wepppy-win-bootstrap-master/scripts'
-scen_dir = str(HUC12_path + 'Runs/DF_Comp/')
+scen_dir = str(HUC12_path + 'Runs/RG_Comp/')
 run_wepp(wepppy_win_dir, scen_dir, model_labs)

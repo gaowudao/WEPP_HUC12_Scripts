@@ -1,4 +1,4 @@
-def select_subset_hs(model_labels, source_dir, Run_dir, hillslopes):
+def select_subset_hs(model_labels, source_dir, Run_dir, scen, hillslopes):
     '''
     Moves a subset of hillslopes from the main scenario directory and copies them
     to a new directory. The files being moved are generally those used in the 
@@ -16,10 +16,10 @@ def select_subset_hs(model_labels, source_dir, Run_dir, hillslopes):
     for mod_lab in model_labels:
 
         #Set path to target directory (subset of larger WEPP hillslopes)
-        DEP_DF_dir = str(Run_dir + 'DF_Comp/' + mod_lab + '_19' + '/wepp/' + 'runs/')
+        DEP_DF_dir = str(Run_dir + scen + mod_lab + '_19' + '/wepp/' + 'runs/')
 
         #Set path for output files 
-        DEP_DF_out_dir = str(Run_dir + 'DF_Comp/' + mod_lab + '_19' + '/wepp/' + 'output/')
+        DEP_DF_out_dir = str(Run_dir + scen + mod_lab + '_19' + '/wepp/' + 'output/')
         
         #create DEP_DF_dir and out_dir
         os.makedirs(DEP_DF_dir)
