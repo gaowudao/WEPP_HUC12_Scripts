@@ -13,7 +13,7 @@ import matplotlib.axes as axs
 
 def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2_obs_yrs, \
                crop1_name, crop2_name, scen_dir, mod_labels, obs_path, wshed, excel_parent_path,\
-               cal_ID, num_hills):
+               cal_ID, num_hills, TSS_adjust):
     '''
     Compares WEPP runoff outputs with observed datasets from the Mn Discovery
     Farms Project.Runoff outputs are split by crop.
@@ -168,10 +168,10 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
     WEPP_crop2_outputs = pd.concat(WEPP_crop2_lst)
     
     # Export outputs to excel files
-    out_path = str(excel_parent_path + 'RG_Comp_{}_{}_{}.xlsx'.format(wshed, cal_ID, crop1_name))
+    out_path = str(excel_parent_path + 'DF_Comp_{}_{}_{}.xlsx'.format(wshed, cal_ID, crop1_name))
     WEPP_crop1_outputs.to_excel(out_path)
     
-    out_path = str(excel_parent_path + 'RG_Comp_{}_{}_{}.xlsx'.format(wshed,cal_ID, crop2_name))
+    out_path = str(excel_parent_path + 'DF_Comp_{}_{}_{}.xlsx'.format(wshed,cal_ID, crop2_name))
     WEPP_crop2_outputs.to_excel(out_path)
     
     
@@ -191,15 +191,20 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
 
         crop_df = obs_df[obs_df['Year'].astype(int).isin(crop_obs_yrs)]
 
-        #Group avg number of runoff events per month
-        num_events = crop_df.groupby('Month')['RO (in)'].count() / len(crop_obs_yrs)
+        print(crop_df)
 
-        #get average monthly total runoff 
+        #Group avg number of runoff and soil erosion events per month
+        RO_events = crop_df.groupby('Month')['RO (in)'].count() / len(crop_obs_yrs)
+        SE_events = crop_df[crop_df['TSS (lbs/ac)'].astype(float) > 0].groupby('Month')['TSS (lbs/ac)'].count() / len(crop_obs_yrs)
+
+        #get average monthly total runoff and TSS yield (in tons/ha)
         crop_RO = (crop_df.groupby('Month')['RO (in)'].sum() / len(crop_obs_yrs)) * 25.4
+        crop_TSS = ((crop_df.groupby('Month')['TSS (lbs/ac)'].sum() / len(crop_obs_yrs)) * 0.00123553) * float(TSS_adjust) #tons/ha
         
         months = [3,4,5,6,7,8,9,10,11]
         #create dataframe of RO values for each month
-        crop_out = pd.DataFrame({'Total RO (mm)':crop_RO, 'Avg # Events':num_events},index = months).fillna(0)
+        crop_out = pd.DataFrame({'Total RO (mm)':crop_RO, 'Avg # RO Events':RO_events,\
+                                 'TSS Yield (ton/ha)':crop_TSS, 'Avg # Erosion Events':SE_events},index = months).fillna(0)
         return crop_out
     
 
@@ -221,6 +226,10 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
 
 #List of watershed names
 wshed_lst = ['BE1','DO1','GO1', 'RO1', 'ST1']
+
+#Percent of TSS Yield that is soil particulate matter (i.e. no organic matter)
+#for each DF site
+TSS_adjustments = [0.86, 0.81, 0.85, 0.835, 0.83]
 
 #Years in first rotation for each crop (starts at 1)
 start_crop1_yrs = [[1], [1], [1,2,3], [1,2,3,4,5,6,8,9,10,11,12,13,14,15],\
@@ -254,19 +263,19 @@ mod_labels = ['L3','L4','B3','B4']
 obs_RO_dic = {}
 WEPP_RO_dic = {}
 
-for wshed, addyr, start1, start2, obs1, obs2, name1, name2, hills\
+for wshed, addyr, start1, start2, obs1, obs2, name1, name2, hills, TSS_adjust\
      in zip(wshed_lst, add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs,\
-            crop2_obs_yrs, crop1_names, crop2_names, num_hills):
+            crop2_obs_yrs, crop1_names, crop2_names, num_hills, TSS_adjustments):
 
     print('Analyzing runoff for {} watershed...'.format(wshed))
 
     #Define paths to scenario parent directory and observed data path
-    scen_dir = 'E:/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/RG_Comp/'.format(wshed)
-    obs_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/{}_Obs_RO.xlsx'.format(wshed, wshed)
-    excel_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/{}/Comparisons/'.format(wshed)
+    scen_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/DF_Comp/'.format(wshed)
+    obs_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/{}_Obs_RO.xlsx'.format(wshed, wshed)
+    excel_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Comparisons/'.format(wshed)
 
     analyze_RO(addyr, start1, start2, obs1, obs2, name1, name2,\
-               scen_dir, mod_labels, obs_path, wshed, excel_path, '10xK_RG', hills)
+               scen_dir, mod_labels, obs_path, wshed, excel_path, 'tile', hills, TSS_adjust)
 
 
 def create_scatter_plots(wshed, mod_lab, mod_name, crop1, color1, crop2, color2, subx, suby):
@@ -352,14 +361,14 @@ for wshed,crop1, color1, crop2, color2 in \
         create_scatter_plots(wshed, mod, mod_name, crop1, color1, crop2, color2, subx, suby)
 
     #Add title to grouping of subplots
-    fig.suptitle('WEPP Outputs with Calibrated K-eff and Rain Gauge Precip vs {} DF Site Data:\n Average Total Monthly Runoff'.format(wshed), fontsize = 14)
+    fig.suptitle('WEPP Outputs with Calibrated K-eff and Tile Drainage vs {} DF Site Data:\n Average Total Monthly Runoff'.format(wshed), fontsize = 14)
 
     #Create single legend for all plots
     handles, labels = fig.axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc = 'upper right')
 
     #save figure to comparisons folder
-    fig_path = 'E:/Soil_Erosion_Project/WEPP_PRWs/{}/Comparisons/{}_RO_10xK_RG.png'.format(wshed,wshed)
+    fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Comparisons/{}_RO_tile.png'.format(wshed,wshed)
     fig.savefig(fig_path)
 
     
