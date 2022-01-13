@@ -180,8 +180,6 @@ def analyze_RO(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2
     obs_df = obs_df[obs_df['Month'].astype(int) > 2]
     obs_df = obs_df[obs_df['Month'].astype(int) < 12]
 
-    print(obs_df.tail())
-
     def sep_obs_crops(crop_obs_yrs):
         '''
         Separates observed data by crop
