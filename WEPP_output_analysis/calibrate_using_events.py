@@ -8,6 +8,7 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
     import os
     import numpy as np
     import hydroeval as he
+    from statistics import mean
 
     
 
@@ -57,12 +58,7 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
     sel_mod_data = all_data[all_data['Month'] > 2] 
     mod_data_months = sel_mod_data[sel_mod_data['Month'] < 12]
 
-    # Create lists of years in the model data that match observed years within
-    # the observed site crop rotation. Then groupby month within each list of years
-    # and get the monthly mean RO event. The monthly mean values represent modeled RO 
-    # events in each month for the modeled years that match a year within the observed crop 
-    # rotation. End result is a dataframe identical in length to the observed monthly means 
-    
+
     #create list to hold all "corresponding_mod_yrs" lists
     all_div_mod_yrs = {}
 
@@ -86,85 +82,45 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         #matching mod years for each observed year
         all_div_mod_yrs[obs_yr] = corresponding_mod_yrs
 
-    #create empty dictionary to assign dataframes with mod RO data that matches each year list
-    #in all_div_mod_yrs
-    #
-    #   i.e. key of 2012 would correspond to a dataframe with modeled years that match the observed
-    #   crop in 2012 for the current watershed
-    #
-    matched_mod_yrs = {}
-
-    for obs_yr_key in all_div_mod_yrs:
-
-        mod_yrs = all_div_mod_yrs[obs_yr_key]
-        matched_mod_yrs[obs_yr_key] = mod_data_months[mod_data_months['Year'].isin(mod_yrs)]
+    #change years in WEPP ebe format (1,2,3,4,5, etc) to years corresponding to obs data (ex: 2012, 2013, etc)
+    for year,key in zip(all_div_mod_yrs, all_div_mod_yrs.keys()):
+        mod_data_months['Year'].replace(all_div_mod_yrs[year], key, inplace = True)
 
 
-
-
-    ####### prep data #########
-    def prep_data(yr_selection, input, type):
+    ####### select runoff events that will be used in statistical tests #########
+    def select_events(yr_selection, input):
         '''
         Limits data to specific years required for downstream analysis 
-        (validation vs calibration, different crops, etc.)
-
+        (validation vs calibration, different crops, etc.) and then selects
+        all years greater than 10mm and 25mm into separate dataframes
 
         '''
 
-        #limit dataframe to year selection
-        if type == 'mod':
+        #limit dataframes in dict input to keys that match years in yr_selection
+        select_data = input[input['Year'].isin(yr_selection)]
 
-            #limit dataframes in dict input to year selection (assign to new dict)
-            select_dfs = {key: input[key] for key in yr_selection}
-
-            output_dic = {}
-
-            #loop through selected dfs
-            for df in select_dfs:
-                #get average total monthly runoff for each month in dataframe
-                monthly_avgs = select_dfs[df].groupby('Month')['RO'].mean()
-
-
-                #fill in 0mm months with 0 by using merge
-                months_df = pd.DataFrame({'Month':[3,4,5,6,7,8,9,10,11]})
-                merged_df = months_df.merge(monthly_avgs.reset_index(), on = ['Month'], how = 'left', validate='one_to_one').fillna(0)
-                output_dic[df] = merged_df
-
-            sep_by_year = pd.concat(output_dic).reset_index(level=0).rename({'level_0':'Year'}, axis=1)
-
-            output = sep_by_year.groupby('Month')['RO'].mean()
-            output = output.reset_index()
-
-        if type == 'obs':
-
-            #select by year
-            select_yrs = input[input['Year'].isin(yr_selection)]
-
-            #get total runoff for each month
-            grouped_df = select_yrs.groupby('Month')['RO'].mean()
-
-            #Create a dictionary that has all months from list and the corresponding year repeated in
-            # separate column (used for merging and creating equal datframes)
-            months = pd.DataFrame({'Month':[3,4,5,6,7,8,9,10,11]})
-            output = months.merge(grouped_df, on = 'Month',\
-                                       how='left', validate="one_to_one").fillna(0)
-            
-
-
+        #loop through selected dfs
+        events_5mm = select_data[select_data['RO'] >= 5]
+        events_25mm = select_data[select_data['RO'] >= 25]
         
-        return output
+        return events_5mm, events_25mm
     
-    obs_crop1_avgs = prep_data(crop1_yrs,obs_data_months, 'obs')
-    obs_crop2_avgs = prep_data(crop2_yrs,obs_data_months, 'obs')
-    df_obs_cal = prep_data(obs_rot,obs_data_months, 'obs')
-    df_obs_val = prep_data(val_yrs,obs_data_months, 'obs')
-    mod_crop1_avgs = prep_data(crop1_yrs, matched_mod_yrs, 'mod')
-    mod_crop2_avgs = prep_data(crop2_yrs, matched_mod_yrs, 'mod')
-    df_mod_cal = prep_data(obs_rot, matched_mod_yrs, 'mod')
-    df_mod_val = prep_data(val_yrs, matched_mod_yrs, 'mod')
+    obs_crop1_5, obs_crop1_25 = select_events(crop1_yrs,obs_data_months)
+    obs_crop2_5, obs_crop2_25 = select_events(crop2_yrs,obs_data_months)
+    obs_cal_5, obs_cal_25 = select_events(cal_yrs,obs_data_months)
+    obs_val_5, obs_val_25 = select_events(val_yrs,obs_data_months)
+    mod_crop1_5, mod_crop1_25 = select_events(crop1_yrs, mod_data_months)
+    mod_crop2_5, mod_crop2_25 = select_events(crop2_yrs, mod_data_months)
+    mod_cal_5, mod_cal_25 = select_events(cal_yrs, mod_data_months)
+    mod_val_5, mod_cal_25 = select_events(val_yrs, mod_data_months)
 
-    def evalulate_mod_outputs(obs_df, mod_df):
+
+    def evalulate_mod_outputs(obs, mod):
         '''
+        The number of events from the observed and modeled data are uneven,
+        so events are randomly selected from whichever dataset is longer in
+        order for the length of the observed and modeled data to be even.
+
         Compare observed data and modeled data via NSE statistical analysis
 
         Returns NSE parameter for obs vs mod dataset for each month (in dataframe format)
@@ -173,41 +129,52 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
             where obs and mod are the individual observed and modeled values in a dataset
         '''
 
+        nse_lst = []
+        pbias_lst = []
+        rmse_lst = []
 
-        #create list of months for looping
-        seasons = [[3,4,5],[6,7,8],[9,10,11]]
-        season_names = ['Spring', 'Summer', 'Fall']
+        #get number of events in each dataset
+        obs_len = len(obs['RO'])
+        mod_len = len(mod['RO'])
 
-        #Monthly_NSEs list
-        seasonal_NSEs = []
-        seasonal_pbias = []
-        seasonal_rmse = []
+        for n in range(0,4000):
 
-        #loop through months
-        for season in seasons:
+            #randomly sample mod data and assign dataframe 
+            if mod_len > obs_len:
+                mod_subset = mod.sample(n = obs_len)
+
+                mod_out = mod_subset
+                obs_out = obs
+
+            if obs_len > mod_len:
+                obs_subset = obs.sample(n = mod_len)
+
+                obs_out = obs_subset
+                mod_out = mod
             
-            #select data for month
-            obs_vals = obs_df[obs_df['Month'].isin(season)]
-            mod_vals = mod_df[mod_df['Month'].isin(season)]
+            mod_out.sort_values(by=['RO'], inplace = True)
+            obs_out.sort_values(by=['RO'], inplace = True)
 
-            nse = he.evaluator(he.nse, mod_vals['RO'], obs_vals['RO'])
-            pbias = he.evaluator(he.pbias, mod_vals['RO'], obs_vals['RO'])
-            rmse = he.evaluator(he.rmse, mod_vals['RO'], obs_vals['RO'])
+            
+            nse = float(he.evaluator(he.nse, mod_out['RO'], obs_out['RO']))
+            pbias = float(he.evaluator(he.pbias, mod_out['RO'], obs_out['RO']))
 
-            seasonal_NSEs.append(nse)
-            seasonal_pbias.append(pbias)
-            seasonal_rmse.append(rmse)
+            nse_lst.append(nse)
+            pbias_lst.append(pbias)
+
+        nse_avg = mean(nse_lst)
+        pbias_avg = mean(pbias_lst)
+
         
-        output_df = pd.DataFrame({'Season':season_names, 'NSE':seasonal_NSEs, 'PBIAS':seasonal_pbias, 'RMSE':seasonal_rmse})
+        output_df = pd.DataFrame({'NSE':[nse_avg], 'PBIAS':[pbias_avg]})
 
 
         return output_df
 
-    print(wshed,clim_mod)
-    params = evalulate_mod_outputs(df_obs_cal,df_mod_cal)
+    stat_param = evalulate_mod_outputs(obs_cal_5, mod_cal_5)
+    print(wshed, clim_mod)
+    print(stat_param)
 
-    print(params)
-    
 
 
 ###### Prepare function parameters and run calibrate_wepp_RO #######
