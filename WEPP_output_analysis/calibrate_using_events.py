@@ -100,19 +100,19 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         select_data = input[input['Year'].isin(yr_selection)]
 
         #loop through selected dfs
-        events_5mm = select_data[select_data['RO'] >= 5]
-        events_25mm = select_data[select_data['RO'] >= 25]
+        spring = select_data[select_data['Month'].isin([3,4,5])]
+        summer = select_data[select_data['Month'].isin([6,7,8])]
+        fall = select_data[select_data['Month'].isin([9,10,11])]
         
-        return events_5mm, events_25mm
+        return spring, summer, fall
     
-    obs_crop1_5, obs_crop1_25 = select_events(crop1_yrs,obs_data_months)
-    obs_crop2_5, obs_crop2_25 = select_events(crop2_yrs,obs_data_months)
-    obs_cal_5, obs_cal_25 = select_events(cal_yrs,obs_data_months)
-    obs_val_5, obs_val_25 = select_events(val_yrs,obs_data_months)
-    mod_crop1_5, mod_crop1_25 = select_events(crop1_yrs, mod_data_months)
-    mod_crop2_5, mod_crop2_25 = select_events(crop2_yrs, mod_data_months)
-    mod_cal_5, mod_cal_25 = select_events(cal_yrs, mod_data_months)
-    mod_val_5, mod_cal_25 = select_events(val_yrs, mod_data_months)
+    obs_crop1_5, obs_crop1_25, fall1 = select_events(crop1_yrs,obs_data_months)
+    obs_crop2_5, obs_crop2_25, fall2 = select_events(crop2_yrs,obs_data_months)
+    mod_crop1_5, mod_crop1_25, fall3 = select_events(crop1_yrs, mod_data_months)
+    mod_crop2_5, mod_crop2_25, fall4 = select_events(crop2_yrs, mod_data_months)
+
+    obs_cal_sp,obs_cal_su,obs_cal_fa = select_events(obs_rot,obs_data_months)
+    mod_cal_sp,mod_cal_su,mod_cal_fa = select_events(obs_rot, mod_data_months)
 
 
     def evalulate_mod_outputs(obs, mod):
@@ -131,26 +131,27 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
 
         nse_lst = []
         pbias_lst = []
-        rmse_lst = []
 
         #get number of events in each dataset
         obs_len = len(obs['RO'])
         mod_len = len(mod['RO'])
 
-        for n in range(0,4000):
+        print(wshed, clim_mod)
+
+        for n in range(0,500):
 
             #randomly sample mod data and assign dataframe 
             if mod_len > obs_len:
-                mod_subset = mod.sample(n = obs_len)
+                mod_subset = mod.sample(obs_len)
 
                 mod_out = mod_subset
-                obs_out = obs
+                obs_out = obs.sort_values(by=['RO'])
 
             if obs_len > mod_len:
-                obs_subset = obs.sample(n = mod_len)
+                obs_subset = obs.sample(mod_len)
 
                 obs_out = obs_subset
-                mod_out = mod
+                mod_out = mod.sort_values(by=['RO'])
             
             mod_out.sort_values(by=['RO'], inplace = True)
             obs_out.sort_values(by=['RO'], inplace = True)
@@ -171,8 +172,7 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
 
         return output_df
 
-    stat_param = evalulate_mod_outputs(obs_cal_5, mod_cal_5)
-    print(wshed, clim_mod)
+    stat_param = evalulate_mod_outputs(obs_cal_sp, mod_cal_sp)
     print(stat_param)
 
 
@@ -221,7 +221,9 @@ lst_val_yrs = [[2015,2016],\
                [2013,2016,2017]]
 
 
-cal_dirs = ['DF_Comp10']
+cal_dirs = ['DF_Comp']
+
+output_params = []
 
 for wshed, crop1_yrs, crop2_yrs, mod_rot_starters, obs_rot, cal_yrs, val_yrs\
     in zip(wshed_lst, lst_crop1_yrs, lst_crop2_yrs, lst_mod_rot_starts_wshed, obs_rot_yrs,\

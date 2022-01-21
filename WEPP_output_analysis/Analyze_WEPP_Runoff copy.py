@@ -229,7 +229,7 @@ def analyze_RO_TSS(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, c
 ###Set up input parameters for analyze_RO function###
 
 #List of watershed names
-wshed_lst = ['BE1','DO1','GO1', 'RO1', 'ST1']
+wshed_lst = ['Obs']
 
 #Percent of TSS Yield that is soil particulate matter (i.e. no organic matter)
 #for each DF site
@@ -261,7 +261,7 @@ crop1_names = ['Corn', 'Corn', 'Alfalfa', 'Corn', 'Corn']
 crop2_names = ['Soy', 'Soy', 'Corn', 'Soy', 'Alfalfa']
 
 #Climate model short IDs
-mod_labels = ['L3','L4','B3','B4']
+mod_labels = ['Obs']
 
 #Output dictionaries
 obs_dic = {}
@@ -279,10 +279,10 @@ for wshed, addyr, start1, start2, obs1, obs2, name1, name2, hills, TSS_adjust\
     excel_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Comparisons/'.format(wshed)
 
     analyze_RO_TSS(addyr, start1, start2, obs1, obs2, name1, name2,\
-               scen_dir, mod_labels, obs_path, wshed, excel_path, '10Ke', hills, TSS_adjust)
+               scen_dir, mod_labels, obs_path, wshed, excel_path, '10Ke_MnDNR', hills, TSS_adjust)
 
 
-def create_scatter_plots(wshed, mod_lab, mod_name, crop1, color1, crop2, color2, subx, suby, var, var_lab):
+def create_scatter_plots(wshed, mod_lab, mod_name, crop1, color1, crop2, color2, var, var_lab):
     '''
     Creates a scatter plot of observed and modeled runoff data for each month
 
@@ -348,21 +348,14 @@ crop_colors1 = ['orange', 'orange', 'purple', 'orange', 'orange']
 crop_colors2 = ['green', 'green', 'orange', 'green', 'purple']
 
 #define full climate model names
-mod_names = ['hadgem2-cc.1 RCP 4.5','hadgem2-cc.1 RCP 8.5',\
-             'gfdl_esm2g.1 RCP 4.5', 'gfdl_esm2g.1 RCP 8.5']
+mod_names = ['Obs']
 
 for wshed,crop1, color1, crop2, color2 in \
     zip(wshed_lst, crop1_names, crop_colors1, crop2_names, crop_colors2):
+    
 
-    #Set up a subplot for each watershed that contains scatter plots for each climate model
-    fig, axes = plt.subplots(nrows = 2, ncols = 2, figsize = (14, 14))
-
-    #Define x/y axis coordinates for each plot
-    subx_vals = [0,1,0,1]
-    suby_vals = [0,0,1,1]
-
-    for mod, mod_name, subx, suby in zip(mod_labels, mod_names, subx_vals, suby_vals):
-        create_scatter_plots(wshed, mod, mod_name, crop1, color1, crop2, color2, subx, suby, 'RO', 'Runoff (mm)')
+    for mod, mod_name, subx, suby in zip(mod_labels, mod_names):
+        create_scatter_plots(wshed, mod, mod_name, crop1, color1, crop2, color2,'RO', 'Runoff (mm)')
 
     #Add title to grouping of subplots
     fig.suptitle('WEPP Outputs with K-eff x 10 vs {} DF Site Data:\n Average Total Monthly Runoff'.format(wshed), fontsize = 14)

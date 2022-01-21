@@ -1,0 +1,133 @@
+def analyze_cli(obs_dir, wshed, cli_dir, clim_mod, loc):
+    from matplotlib.pyplot import fill
+    import pandas as pd
+    import numpy as np
+    import os
+    import statistics
+    import hydroeval as he
+
+    #load in daily precipitation data
+    daily_inputs = str(obs_dir + '{}_obs_19.xlsx'.format(wshed))
+    daily_data = pd.read_excel(daily_inputs)
+
+    #Create path to monthly data
+    monthly_data = str(obs_dir + '{}_MnDNR_Obs.xlsx'.format(wshed))
+
+    def read_excel_sheets(output_dic, monthly_data):
+        """
+        Read all sheets of observed precip excel file and return as dataframes
+        in a dictionary
+
+        Observed monthly pr averages should be in one sheet labeled "Monthly_pr"
+
+        Observed monthly number of pr events should be in a separate sheet labeled
+        "Monthly_pr_e"  ... _e stands for events
+
+        Observed temperature data should be in daily format and have a separate column for 
+        the month ID number (i.e. 1, 2, 3, 4...)
+        """
+        #Read in excel file
+        xl = pd.ExcelFile(monthly_data)
+        columns = None
+        #loop through sheets
+        for idx, name in enumerate(xl.sheet_names):
+
+            #define excel sheet
+            sheet = xl.parse(name)
+
+            # Assume index of existing data frame when appended
+            df = pd.DataFrame(sheet)
+
+            #select sheets with monthly data
+            if 'Monthly' in name:
+                #set year as index
+                df.set_index('Year', inplace = True)
+                output_dic[name] = df
+
+    obs_monthly_data = {}
+    read_excel_sheets(obs_monthly_data, monthly_data)
+
+    month_vals = [1,2,3,4,5,6,7,8,9,10,11,12]
+    days_month = [31,28,31,30,31,30,31,31,30,31,30,31]
+
+    days_in_months = pd.DataFrame({'month':month_vals, 'num_days':days_month})
+
+    #Fill in missing monthly data with monthly average across all years
+    #loop through dataframes in dictionary
+    for df in obs_monthly_data:
+        #loop through month columns
+        for month in obs_monthly_data[df]:
+
+            days_in_month = days_in_months[days_in_months['month'] == month]
+
+            daily_sub = obs_monthly_data[df][month] / days_in_month['num_days']
+
+            #replace 'M' with monthly average across all years
+            obs_monthly_data[df][month].replace('M', pd.to_numeric(daily_sub, errors='coerce').mean(), inplace = True)
+
+
+    def fill_values(var,monthly_data,monthly_var):
+        '''
+        fills in missing daily values with monthly averages from the entire
+        time period 
+
+        var = variable (pr, Tmax, Tmin)
+        monthly_data = observed monthly averages for each var
+        monthly_var = key of df in monthly dictionary that corresponds to var
+        '''
+        #loop through all values in daily dataframe
+        for n, val in enumerate(daily_data[var]):
+
+            #if daily value is missing...
+            if val in ['M', 'T', 'S']:
+                
+                year = daily_data['Year'].iloc[n]
+                month = daily_data['Month'].iloc[n]
+                
+                #replace with monthly value
+                daily_data[var].iloc[n] =  monthly_data[monthly_var].loc[year, month]
+
+    #fill climate values
+    fill_values('Pr', obs_monthly_data, 'Monthly_pr')
+    fill_values('Tmax', obs_monthly_data, 'Monthly_Tmax')
+    fill_values('Tmin', obs_monthly_data, 'Monthly_Tmin')
+
+    #convert data from F and in to C and mm
+    daily_data['Pr'] = daily_data['Pr'] * 25.4
+    daily_data['Tmax'] = (daily_data['Tmax'] - 32) * 5.0/9.0
+    daily_data['Tmin'] = (daily_data['Tmin'] - 32) * 5.0/9.0
+
+    
+    #Read in and prep cligen data
+    cli_data = pd.read_csv(str(cli_dir + '/{}_{}_{}_19.cli'.format(wshed,clim_mod,loc)), skiprows = 13, sep = '\s+| ', engine = 'python')
+    cli_data.drop([0,], axis = 0, inplace = True)
+    cli_data['Pr'] = cli_data['prcp'].astype(float)
+    cli_data['Month'] = cli_data['mo'].astype(int)
+    cli_data['year'] = cli_data['year'].astype(int)
+
+    #get means of both datasets
+    cli_avgs = cli_data.groupby('Month')['Pr'].sum() / 55
+    mndnr_avgs = [19.28612964,18.60401558,39.25845315,63.89424193,85.60723636,\
+                 111.1734909,91.2876,87.43141818,74.22803636,67.03752727,32.004,21.58374621]
+
+    mndnr_mean = pd.DataFrame({'Month':[1,2,3,4,5,6,7,8,9,10,11,12], 'Pr':mndnr_avgs})
+
+
+    cli_25 = cli_data[cli_data['Pr'] >= 25].groupby('Month')['Pr'].count() / 55
+    mndnr_25 = daily_data[daily_data['Pr']>= 25].groupby('Month')['Pr'].count() / 55
+
+    print(cli_25)
+    print(mndnr_25)
+
+
+
+    
+
+
+
+    print(he.evaluator(he.nse, cli_avgs.astype(float), mndnr_mean['Pr'].astype(float)))
+
+obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/obs_data/'
+cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/PAR/LOCA/'
+
+analyze_cli(obs_dir, 'ST1', cli_dir, 'L3', '7')

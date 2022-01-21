@@ -1,0 +1,80 @@
+def analyze_cli(obs_dir, wshed, data_len, top_path, clim_mod, loc):
+    from matplotlib.pyplot import fill
+    import pandas as pd
+    import numpy as np
+    import os
+    import statistics
+    import hydroeval as he
+
+    #Create path to monthly data
+    daily_input = str(obs_dir + '{}_daily_MnDNR{}.xlsx'.format(wshed,data_len))
+
+    #read in daily observed data from MnDNR
+    daily_mndnr_data = pd.read_excel(daily_input)
+    months = [1,2,3,4,5,6,7,8,9,10,11,12]
+
+    stdevs = []
+    skewps = []
+
+    #loop through month and get standard deviation and skew coeff for precip
+    for month in months:
+        #selected data that only corresponds to 'month'
+        data_for_month = daily_mndnr_data[daily_mndnr_data['Month'] == month]
+
+        pr_for_month = pd.to_numeric(data_for_month['Pr'],errors='coerce')
+
+        pr_for_month.dropna(inplace = True)
+
+        stdev = statistics.pstdev(pr_for_month)
+        skewp = pr_for_month.skew(axis = 0, skipna = True)
+
+        if skewp > 4.3:
+            skewp = 4.3
+
+        skewps.append(skewp)
+        stdevs.append(stdev)
+
+    print(skewps)
+    print(stdevs)
+
+
+    # Prep create_out_string function which is used later in script after calibrated values have been calculated
+    def create_out_string(var, var_name):
+        '''
+        creates string of calibrated data in .top file format
+        '''
+
+        new_line = str('{}{:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}  {:.2f}'\
+                        .format(var_name, var[0], var[1], var[2], var[3], var[4], var[5],\
+                                var[6], var[7], var[8], var[9], var[10], var[11]))
+
+        return new_line
+
+    new_stdevs = create_out_string(stdevs, ' S DEV P  ')
+    new_skewps = create_out_string(skewps, ' SKEW P   ')
+
+    top_file = '{}_{}_{}_19.top'.format(wshed,clim_mod,loc)
+
+    #open .top file
+    with open(str(top_path + top_file), 'r+') as file:
+        #read lines of file
+        lines = file.readlines()
+
+        lines[4] = str(new_stdevs + '\n')
+        lines[5] = str(new_skewps + '\n')
+
+        # move file pointer to the beginning of a file
+        file.seek(0)
+        # truncate the file
+        file.truncate()
+
+        #write lines to truncated file
+        file.writelines(lines)
+
+        file.close()
+
+
+obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/RO1/obs_data/'
+top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/RO1/GDS/Obs/obs_sub/'
+
+analyze_cli(obs_dir, 'RO1', '_sub', top_path, 'B3', '2')
