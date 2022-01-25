@@ -9,6 +9,7 @@ from functools import reduce, partial
 import statsmodels.api as sm
 import matplotlib.patches as mpatches
 import matplotlib.axes as axs
+from matplotlib.gridspec import GridSpec
 
 
 def analyze_RO_TSS(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, crop2_obs_yrs, \
@@ -78,8 +79,8 @@ def analyze_RO_TSS(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, c
         '''
 
         #Set path to hillslope outputs and inputs(runs)
-        out_files_dir = str(scen_dir + mod_lab + '_' + '19' + '/' + 'wepp' + '/' + 'output' + '/')
-        run_files_dir = str(scen_dir + mod_lab + '_' + '19' + '/' + 'wepp' + '/' + 'runs' + '/')
+        out_files_dir = str(scen_dir + mod_lab + '/wepp/output/')
+        run_files_dir = str(scen_dir + mod_lab + '/wepp/runs/')
 
         #Get file names for each hillslope output
         out_hill_names = [x for x in os.listdir(out_files_dir) if x.endswith('.ebe.dat')]
@@ -229,7 +230,7 @@ def analyze_RO_TSS(add_years, start_crop1_yrs, start_crop2_yrs, crop1_obs_yrs, c
 ###Set up input parameters for analyze_RO function###
 
 #List of watershed names
-wshed_lst = ['Obs']
+wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
 
 #Percent of TSS Yield that is soil particulate matter (i.e. no organic matter)
 #for each DF site
@@ -274,32 +275,41 @@ for wshed, addyr, start1, start2, obs1, obs2, name1, name2, hills, TSS_adjust\
     print('Analyzing runoff for {} watershed...'.format(wshed))
 
     #Define paths to scenario parent directory and observed data path
-    scen_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/DF_Comp10/'.format(wshed)
+    scen_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/DF_Comp5/'.format(wshed)
     obs_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/{}_Obs_RO.xlsx'.format(wshed, wshed)
     excel_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Comparisons/'.format(wshed)
 
     analyze_RO_TSS(addyr, start1, start2, obs1, obs2, name1, name2,\
-               scen_dir, mod_labels, obs_path, wshed, excel_path, '10Ke_MnDNR', hills, TSS_adjust)
+               scen_dir, mod_labels, obs_path, wshed, excel_path, '_MnDNR_5Ke', hills, TSS_adjust)
 
 
-def create_scatter_plots(wshed, mod_lab, mod_name, crop1, color1, crop2, color2, var, var_lab):
-    '''
-    Creates a scatter plot of observed and modeled runoff data for each month
 
-    Scatter plots are separated by climate models (mod_lab)
+########## GRAPH DATA #############
 
-    mod_lab = model short label
-    
-    mod_name = full model name
-    '''
+#set up colors for crops in each watershed
+crop_colors1 = ['orange', 'orange', 'purple', 'orange', 'orange']
+crop_colors2 = ['green', 'green', 'orange', 'green', 'purple']
 
+#Define x/y axis coordinates for each plot
+subx_vals = [0,0,1,1,0]
+suby_vals = [0,1,0,1,2]
+
+
+#Set up a subplot for each watershed that contains plots for each watershed
+fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (16, 12))
+
+#loop through watershed, crops, colors for crops, and the subplot x,y coords
+for wshed, crop1, color1, crop2, color2, subx, suby in \
+    zip(wshed_lst, crop1_names, crop_colors1, crop2_names, crop_colors2, \
+        subx_vals, suby_vals):
 
     #loop through dataframes in dict with modeled data
     for mod_df in WEPP_dic:
-        
+
         #define watershed and crop name for each iteration
-        crop_name = str(mod_df[:-3])
+        crop_name = str(mod_df[:-4])
         crop_name = crop_name[4::]
+        print(crop_name)
 
         #Define colors and plot names for each crop
         if crop_name == crop1:
@@ -310,8 +320,8 @@ def create_scatter_plots(wshed, mod_lab, mod_name, crop1, color1, crop2, color2,
             crop_lab = crop2
 
         #specify which modeled data to use based on climate model short ID
-        if mod_df.startswith(wshed) and mod_df.endswith(mod_lab):
-            axes[subx,suby].plot(WEPP_dic[mod_df].index.values, WEPP_dic[mod_df][var],\
+        if mod_df.startswith(wshed):
+            axes[subx, suby].plot(WEPP_dic[mod_df].index.values, WEPP_dic[mod_df]['RO'],\
                                 marker = 'o', label = 'WEPP Runoff - {}'.format(crop_lab), color = color,\
                                 alpha = 1)
 
@@ -330,41 +340,31 @@ def create_scatter_plots(wshed, mod_lab, mod_name, crop1, color1, crop2, color2,
             crop_lab = crop2
         
         if obs_df.startswith(wshed):
-            axes[subx,suby].plot(obs_dic[obs_df].index.values, obs_dic[obs_df][var],\
+            axes[subx, suby].plot(obs_dic[obs_df].index.values, obs_dic[obs_df]['RO'],\
                                 marker = '^', label = 'Observed Data - {}'.format(crop_lab), color = color,\
                                 linestyle = 'dashed' ,alpha = 0.7)
 
-                
-    #Add labels
+
     axes[subx,suby].set_xlabel('Month')
-    axes[subx,suby].set_ylabel('Average Total {}'.format(var_lab))
+    axes[subx,suby].set_ylabel('Average Total Runoff (mm)')
 
     #Add sub-title
-    axes[subx,suby].set_title(mod_name)
+    axes[subx,suby].set_title(wshed)
 
+#remove blank plot that is generated
+fig.delaxes(axes[1][2])
 
-#set up colors for crops in each watershed
-crop_colors1 = ['orange', 'orange', 'purple', 'orange', 'orange']
-crop_colors2 = ['green', 'green', 'orange', 'green', 'purple']
+#Add title to grouping of subplots
+fig.suptitle('WEPP Outputs with Ke x 3 vs DF Site Data:\n Average Total Monthly Runoff',\
+              fontsize = 14)
 
-#define full climate model names
-mod_names = ['Obs']
+#Create single legend without replicate items
+h1, l1 = fig.axes[0].get_legend_handles_labels()
+h2, l2 = fig.axes[2].get_legend_handles_labels()
 
-for wshed,crop1, color1, crop2, color2 in \
-    zip(wshed_lst, crop1_names, crop_colors1, crop2_names, crop_colors2):
-    
+fig.legend(h1+h2, l1+l2, bbox_to_anchor = [0.86,0.24], loc = 'lower right')
 
-    for mod, mod_name, subx, suby in zip(mod_labels, mod_names):
-        create_scatter_plots(wshed, mod, mod_name, crop1, color1, crop2, color2,'RO', 'Runoff (mm)')
-
-    #Add title to grouping of subplots
-    fig.suptitle('WEPP Outputs with K-eff x 10 vs {} DF Site Data:\n Average Total Monthly Runoff'.format(wshed), fontsize = 14)
-
-    #Create single legend for all plots
-    handles, labels = fig.axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc = 'upper right')
-
-    #save figure to comparisons folder
-    fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Comparisons/{}_RO_10Ke.png'.format(wshed,wshed)
-    fig.savefig(fig_path)
+#save figure to comparisons folder
+fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/WEPPvDF_RO_5Ke.png'
+fig.savefig(fig_path)
 #%%

@@ -87,32 +87,106 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         mod_data_months['Year'].replace(all_div_mod_yrs[year], key, inplace = True)
 
 
+    def get_obs_avgs(combined_df,var):
+
+        #Split data into two different dataframes by crop type
+        crop1_df = combined_df[combined_df['Year'].isin(crop1_yrs)]
+        crop2_df = combined_df[combined_df['Year'].isin(crop2_yrs)]
+
+        months = [3,4,5,6,7,8,9,10,11]
+
+        months_present = []
+        cal_avgs = []
+        val_avgs = []
+
+        #loop through months
+        for month in months:
+
+            #get events for month
+            crop1_month = crop1_df[crop1_df['Month'] == month]
+            crop2_month = crop2_df[crop2_df['Month'] == month]
+
+            #randomly shuffle df rows    
+            random_crop1 = crop1_month.sample(frac=1)
+            random_crop2 = crop2_month.sample(frac=1)
+
+            def split_dfs(df):
+                '''
+                only split dataframe if value is greater than 1
+                '''
+                if len(df) > 1:
+                    #split into sub_dataframes (returned type is a list)
+                    split_df = np.array_split(df, 2)
+
+                elif len(df) == 1:
+                    split_df = df
+
+                return split_df
+
+            crop1_split = split_dfs(random_crop1)
+            crop2_split = split_dfs(random_crop2)
+            
+
+            #combine the first sub-dataframes together and repeat for the second ones
+            cal_events = crop1_split[0].append(crop2_split[0], ignore_index = True)
+            val_events = crop1_split[1].append(crop2_split[1], ignore_index = True)
+
+            #get average of each df by dividing total sum by half of the 
+            # observed years
+            cal_avg = cal_events[var].sum() / (len(obs_rot)/2)
+            val_avg = val_events[var].sum() / (len(obs_rot)/2)
+
+            #append to lists created above
+            months_present.append(month)
+            cal_avgs.append(cal_avg)
+            val_avgs.append(val_avg)
+
+        output_df = pd.DataFrame({'cal_{}'.format(var):cal_avgs,\
+                                 'val_{}'.format(var):val_avgs,\
+                                 'month':months_present})
+
+
+        return output_df
+
+    obs_avgs = get_obs_avgs(obs_data_months, 'RO')
+
+    print(obs_avgs)
+
+
     ####### select runoff events that will be used in statistical tests #########
-    def select_events(yr_selection, input):
+    def get_mod_avgs(yr_selection, input, var):
         '''
         Limits data to specific years required for downstream analysis 
         (validation vs calibration, different crops, etc.) and then selects
         all years greater than 10mm and 25mm into separate dataframes
 
         '''
+        #create empty list for appending
+        all_yrs = []
+
+        #select year keys in all_div_mod_yrs that correspond to the year selection
+        for year in all_div_mod_yrs:
+            if year in yr_selection:
+                num_yrs = all_div_mod_yrs[year]
+                #extend years to all_yrs
+                all_yrs.extend(num_yrs)
 
         #limit dataframes in dict input to keys that match years in yr_selection
         select_data = input[input['Year'].isin(yr_selection)]
 
-        #loop through selected dfs
-        spring = select_data[select_data['Month'].isin([3,4,5])]
-        summer = select_data[select_data['Month'].isin([6,7,8])]
-        fall = select_data[select_data['Month'].isin([9,10,11])]
-        
-        return spring, summer, fall
-    
-    obs_crop1_5, obs_crop1_25, fall1 = select_events(crop1_yrs,obs_data_months)
-    obs_crop2_5, obs_crop2_25, fall2 = select_events(crop2_yrs,obs_data_months)
-    mod_crop1_5, mod_crop1_25, fall3 = select_events(crop1_yrs, mod_data_months)
-    mod_crop2_5, mod_crop2_25, fall4 = select_events(crop2_yrs, mod_data_months)
+        #get monthly averages for input data
+        monthly_df = select_data.groupby('Month')[var].sum() / len(all_yrs)
 
-    obs_cal_sp,obs_cal_su,obs_cal_fa = select_events(obs_rot,obs_data_months)
-    mod_cal_sp,mod_cal_su,mod_cal_fa = select_events(obs_rot, mod_data_months)
+        #fill in 0mm months with 0 by using merge
+        months_df = pd.DataFrame({'Month':[3,4,5,6,7,8,9,10,11]})
+        merged_df = months_df.merge(monthly_df.reset_index(), on = ['Month'], how = 'left', validate='one_to_one').fillna(0)
+        monthly_avgs = merged_df
+
+        return monthly_avgs
+    
+    mod_avgs = get_mod_avgs(obs_rot, mod_data_months, 'RO')
+
+    print(mod_avgs)
 
 
     def evalulate_mod_outputs(obs, mod):
@@ -132,36 +206,13 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         nse_lst = []
         pbias_lst = []
 
-        #get number of events in each dataset
-        obs_len = len(obs['RO'])
-        mod_len = len(mod['RO'])
-
         print(wshed, clim_mod)
 
-        for n in range(0,500):
+        nse = float(he.evaluator(he.nse, mod['RO'], obs['cal_RO']))
+        pbias = float(he.evaluator(he.pbias, mod['RO'], obs['cal_RO']))
 
-            #randomly sample mod data and assign dataframe 
-            if mod_len > obs_len:
-                mod_subset = mod.sample(obs_len)
-
-                mod_out = mod_subset
-                obs_out = obs.sort_values(by=['RO'])
-
-            if obs_len > mod_len:
-                obs_subset = obs.sample(mod_len)
-
-                obs_out = obs_subset
-                mod_out = mod.sort_values(by=['RO'])
-            
-            mod_out.sort_values(by=['RO'], inplace = True)
-            obs_out.sort_values(by=['RO'], inplace = True)
-
-            
-            nse = float(he.evaluator(he.nse, mod_out['RO'], obs_out['RO']))
-            pbias = float(he.evaluator(he.pbias, mod_out['RO'], obs_out['RO']))
-
-            nse_lst.append(nse)
-            pbias_lst.append(pbias)
+        nse_lst.append(nse)
+        pbias_lst.append(pbias)
 
         nse_avg = mean(nse_lst)
         pbias_avg = mean(pbias_lst)
@@ -172,8 +223,9 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
 
         return output_df
 
-    stat_param = evalulate_mod_outputs(obs_cal_sp, mod_cal_sp)
-    print(stat_param)
+    output_stats = evalulate_mod_outputs(obs_avgs, mod_avgs)
+
+    print(output_stats)
 
 
 
@@ -233,7 +285,5 @@ for wshed, crop1_yrs, crop2_yrs, mod_rot_starters, obs_rot, cal_yrs, val_yrs\
 
     for cal_dir in cal_dirs:
 
-        for clim_mod in ['L3_19','L4_19','B3_19','B4_19']:
-
-            calibrate_wepp_RO(wshed_path, wshed, clim_mod, cal_dir, crop1_yrs, crop2_yrs, mod_rot_starters,\
-                              obs_rot, cal_yrs, val_yrs)
+        calibrate_wepp_RO(wshed_path, wshed, 'Obs', cal_dir, crop1_yrs, crop2_yrs, mod_rot_starters,\
+                        obs_rot, cal_yrs, val_yrs)

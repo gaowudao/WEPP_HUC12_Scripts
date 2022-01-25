@@ -2,87 +2,13 @@
 # coding: utf-8
 
 # In[1]:
-def gen_cli_file(top_path, site_name,par_path):
+def gen_cli_file(site_name,par_path):
 
     import os
     import pandas as pd
     import numpy as np
  
     ###### Create .CLI files ########
-
-    ### Load TOP file names to list
-    os.chdir(top_path)
-    top_files = [x for x in os.listdir('.') if x.endswith('.top')]
-
-    ### Read in TOP files as lines in a list
-    top_lines = {}
-    for file_name in top_files:
-        temp_lst = []
-        with open (file_name, 'rt') as file:
-            for line in file:
-                temp_lst.append(line)
-        top_lines[file_name] = temp_lst
-
-
-    ### Load in Minnesota Climate Station Data as dataframe
-    stations = 'E://Soil_Erosion_Project//Discovery_Farms//MN_stations.txt'
-    stations = pd.read_csv(stations, sep = ('\t'))
-
-    ### Set up path to station files, station_path contains individual pre-exisiting
-    ### .PAR files with climate information for each station.
-    station_path = 'E://Soil_Erosion_Project//Discovery_Farms//MN_stations//'
-
-    par_files = {}
-
-    def top_to_par(top_dic, par_dic):
-        '''
-        Uses .TOP files to locate exisiting climate station files that have similar
-        GPS coordinates and climate regimes. Once an existing station is selected,
-        the first 12 lines of that file are overwritten by the .TOP file to create
-        a new .PAR file.
-        '''
-        for key in top_dic:
-            # Assign lat/lon values from each file
-            lat = float(top_dic[key][1][8:13])
-            lon = float(top_dic[key][1][21:26])
-
-            # Find index number of the row in each stations dataframe where the
-            # latitude and longitude are closest to the TOP input file
-            index = stations[['Lat', 'Lon']].sub([lat, lon]).abs().idxmin()
-
-            # Find station file name from stations df using index
-            station_name = str(stations.loc[index].File)[6:14]
-
-            #Change dir to station_path
-            os.chdir(station_path)
-
-            with open(station_name + '.par', 'r') as station_file:
-                # read a station_file lines to a list
-                station_lines = station_file.readlines()
-
-                # replace top lines in station file with top lines
-                # from .TOP file
-                station_lines[0:12] = top_dic[key][0:12]
-
-            # Assign to new_df
-            par_dic[key] = station_lines
-
-    print('Creating .par files from calibrated .top files')
-    top_to_par(top_lines, par_files)
-
-    def write_par(par_dic):
-        '''
-        Writes .PAR files (in list format) to new file
-        '''
-        os.chdir(par_path)
-
-        for key in par_dic:
-            out_file = open(str(key)[:-4] + '.par', 'w+')
-            for line in par_dic[key]:
-                out_file.write('%s' % line)
-
-    write_par(par_files)
-
 
     ### Read in .PAR files
     os.chdir(par_path)
@@ -113,8 +39,8 @@ def gen_cli_file(top_path, site_name,par_path):
     print('Generating .cli file from .par file...')
     par_to_cli(par_path,par_files)
 
-top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/GDS/Obs/obs_sub/'
-par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/PAR/Obs/obs_sub/'
-site_name = 'ST1'
+top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/GDS/Obs/obs_sub/'
+par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/PAR/Obs/obs_sub/'
+site_name = 'DO1'
 
-gen_cli_file(top_path, site_name,par_path)
+gen_cli_file(site_name,par_path)
