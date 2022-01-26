@@ -1,5 +1,7 @@
+#%%
+
 def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop2_yrs,\
-                      mod_rot_starters, obs_rot, cal_yrs, val_yrs):
+                      mod_rot_starters, obs_rot, cal_yrs, val_yrs, output_dic):
     '''
     cal_dir = name of directory that matches the calibration scenario 
     '''
@@ -166,12 +168,14 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         #Put average monthly totals into dataframe with columns for month, cal vals, and val vals
         output_df = pd.DataFrame({'cal_{}'.format(var):cal_avgs,\
                                  'val_{}'.format(var):val_avgs,\
-                                 'month':months_present})
+                                 'Month':months_present})
 
 
         return output_df
 
     obs_avgs = get_obs_avgs(obs_data_months, 'RO')
+
+    output_dic[str(wshed + '_obs')] = obs_avgs
 
     print(obs_avgs)
 
@@ -184,6 +188,7 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         all years greater than 10mm and 25mm into separate dataframes
 
         '''
+
         #create empty list for appending
         all_yrs = []
 
@@ -208,6 +213,8 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         return monthly_avgs
     
     mod_avgs = get_mod_avgs(obs_rot, mod_data_months, 'RO')
+
+    output_dic[str(wshed + '_mod')] = mod_avgs
 
     print(mod_avgs)
 
@@ -294,9 +301,10 @@ lst_val_yrs = [[2015,2016],\
                [2013,2016,2017]]
 
 
-cal_dirs = ['DF_Comp']
+cal_dirs = ['DF_Comp10']
 
 output_params = []
+monthly_avgs = {}
 
 for wshed, crop1_yrs, crop2_yrs, mod_rot_starters, obs_rot, cal_yrs, val_yrs\
     in zip(wshed_lst, lst_crop1_yrs, lst_crop2_yrs, lst_mod_rot_starts_wshed, obs_rot_yrs,\
@@ -307,4 +315,77 @@ for wshed, crop1_yrs, crop2_yrs, mod_rot_starters, obs_rot, cal_yrs, val_yrs\
     for cal_dir in cal_dirs:
 
         calibrate_wepp_RO(wshed_path, wshed, 'Obs', cal_dir, crop1_yrs, crop2_yrs, mod_rot_starters,\
-                        obs_rot, cal_yrs, val_yrs)
+                        obs_rot, cal_yrs, val_yrs, monthly_avgs)
+
+
+
+
+########## GRAPH DATA #############
+
+def graph_monthly_avgs(mod_var, obs_var, input_dic, Ke_adj, Ke_outlab):
+    '''
+    Graph monthly averages from each DF site vs WEPP
+    comparison
+
+    mod_var = modeled variable
+    obs_var = observed variable
+    input_dic = dictionary with monthly avg data
+
+    Saves figure as png
+    '''
+
+    import matplotlib.axes as axs
+    import matplotlib.pyplot as plt
+
+
+    #Define x/y axis coordinates for each plot
+    subx_vals = [0,0,1,1,0]
+    suby_vals = [0,1,0,1,2]
+
+
+    #Set up a subplot for each watershed that contains plots for each watershed
+    fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (16, 12))
+
+    #loop through watershed, crops, colors for crops, and the subplot x,y coords
+    for wshed, subx, suby in zip(wshed_lst, subx_vals, suby_vals): 
+
+        obs_df = str(wshed + '_obs')
+        mod_df = str(wshed + '_mod')
+
+        axes[subx, suby].plot(input_dic[mod_df]['Month'], input_dic[mod_df][mod_var],\
+                              marker = 'o', label = 'WEPP Runoff', alpha = 1)
+
+        
+            
+        axes[subx, suby].plot(input_dic[obs_df]['Month'], input_dic[obs_df][obs_var],\
+                              marker = '^', label = 'Observed Data', linestyle = 'dashed', alpha = 0.7)
+
+
+        axes[subx,suby].set_xlabel('Month')
+        axes[subx,suby].set_ylabel('Average Total Runoff (mm)')
+
+        #Add sub-title
+        axes[subx,suby].set_title(wshed)
+
+    #remove blank plot that is generated
+    fig.delaxes(axes[1][2])
+
+    #Add title to grouping of subplots
+    fig.suptitle('WEPP Outputs {} vs DF Site Data:\n Average Total Monthly Runoff'\
+                  .format(Ke_adj),\
+                fontsize = 14)
+
+    #Create single legend without replicate items
+    h1, l1 = fig.axes[0].get_legend_handles_labels()
+
+    fig.legend(h1, l1, bbox_to_anchor = [0.83,0.26], loc = 'lower right')
+
+    #save figure to comparisons folder
+    fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/WEPPvDF_RO_cal{}.png'\
+                .format(Ke_outlab)
+
+    fig.savefig(fig_path)
+
+graph_monthly_avgs('RO', 'cal_RO', monthly_avgs, 'Ke x 10', 'Ke10')
+
+#%%

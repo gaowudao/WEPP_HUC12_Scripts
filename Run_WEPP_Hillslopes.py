@@ -20,5 +20,5 @@ model_labs = ['Obs/']
 
 for wshed in wshed_lst:
     HUC12_path = str('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/'.format(wshed))
-    scen_dir = str(HUC12_path + 'Runs/DF_Comp5/')
+    scen_dir = str(HUC12_path + 'Runs/DF_Comp10/')
     run_wepp(wepppy_win_dir, scen_dir, model_labs)
