@@ -93,54 +93,77 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         crop1_df = combined_df[combined_df['Year'].isin(crop1_yrs)]
         crop2_df = combined_df[combined_df['Year'].isin(crop2_yrs)]
 
+        #set bins and months
+        lower_bins = [0, 5, 10, 15, 20]
+        upper_bins = [5, 10, 15, 20, 500]
         months = [3,4,5,6,7,8,9,10,11]
 
+        #create lists that will hold avg values for each month
         months_present = []
         cal_avgs = []
         val_avgs = []
 
-        #loop through months
         for month in months:
-
-            #get events for month
-            crop1_month = crop1_df[crop1_df['Month'] == month]
-            crop2_month = crop2_df[crop2_df['Month'] == month]
-
-            #randomly shuffle df rows    
-            random_crop1 = crop1_month.sample(frac=1)
-            random_crop2 = crop2_month.sample(frac=1)
-
-            def split_dfs(df):
-                '''
-                only split dataframe if value is greater than 1
-                '''
-                if len(df) > 1:
-                    #split into sub_dataframes (returned type is a list)
-                    split_df = np.array_split(df, 2)
-
-                elif len(df) == 1:
-                    split_df = df
-
-                return split_df
-
-            crop1_split = split_dfs(random_crop1)
-            crop2_split = split_dfs(random_crop2)
             
+            #create lists that will hold avg values by bin
+            cal_bin_avgs = []
+            val_bin_avgs = []
 
-            #combine the first sub-dataframes together and repeat for the second ones
-            cal_events = crop1_split[0].append(crop2_split[0], ignore_index = True)
-            val_events = crop1_split[1].append(crop2_split[1], ignore_index = True)
+            for low_bin, high_bin in zip(lower_bins, upper_bins):
 
+                #get data for month
+                bin_df1 = crop1_df[(crop1_df['RO'] > low_bin) & (crop1_df['RO'] < high_bin)]
+                month_df1 = bin_df1[bin_df1['Month'] == month]
+                
+                bin_df2 = crop2_df[(crop2_df['RO'] > low_bin) & (crop2_df['RO'] < high_bin)]
+                month_df2 = bin_df2[bin_df2['Month'] == month]
+
+
+                #split dataframe into two equal dfs if total len is > 1
+                if len(month_df1) > 1:
+
+                    #split into two sub_dataframes (returned type is a list)
+                    split_df1 = np.array_split(month_df1, 2)
+
+                #create list that matches length of split dataframe if len is < 1
+                if len(month_df1) < 2:
+
+                    month_df1['RO'] = month_df1['RO'].astype(float) / 2
+
+                    split_df1 = [month_df1,month_df1]
+
+                #repeat for crop 2
+                if len(month_df2) > 1:
+
+                    split_df2 = np.array_split(month_df2, 2)
+
+                if len(month_df2) < 2:
+
+                    month_df2['RO'] = month_df2['RO'].astype(float) / 2
+
+                    split_df2 = [month_df2, month_df2]
+
+                #combine crop1 and crop2 for each split (creates cal and val dfs)
+                cal_events = split_df1[0].append(split_df2[0])
+                val_events = split_df1[1].append(split_df2[1])
+
+                cal_bin_avgs.append(cal_events)
+                val_bin_avgs.append(val_events)
+
+            cal_data = pd.concat(cal_bin_avgs)
+            val_data = pd.concat(val_bin_avgs)
+            
             #get average of each df by dividing total sum by half of the 
             # observed years
-            cal_avg = cal_events[var].sum() / (len(obs_rot)/2)
-            val_avg = val_events[var].sum() / (len(obs_rot)/2)
+            cal_avg = cal_data[var].sum() / (len(obs_rot) / 2)
+            val_avg = val_data[var].sum() / (len(obs_rot) / 2)
 
             #append to lists created above
-            months_present.append(month)
             cal_avgs.append(cal_avg)
             val_avgs.append(val_avg)
+            months_present.append(month)
 
+        #Put average monthly totals into dataframe with columns for month, cal vals, and val vals
         output_df = pd.DataFrame({'cal_{}'.format(var):cal_avgs,\
                                  'val_{}'.format(var):val_avgs,\
                                  'month':months_present})
@@ -226,8 +249,6 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
     output_stats = evalulate_mod_outputs(obs_avgs, mod_avgs)
 
     print(output_stats)
-
-
 
 ###### Prepare function parameters and run calibrate_wepp_RO #######
 
