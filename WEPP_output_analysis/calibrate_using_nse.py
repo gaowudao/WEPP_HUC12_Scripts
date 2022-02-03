@@ -1,7 +1,7 @@
 #%%
 
 def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop2_yrs,\
-                      mod_rot_starters, obs_rot, cal_yrs, val_yrs, output_dic):
+                      mod_rot_starters, obs_rot, crop1_name, crop2_name):
     '''
     cal_dir = name of directory that matches the calibration scenario 
     '''
@@ -20,7 +20,7 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
     obs_data_whole = pd.read_excel(str(wshed_path + 'obs_data/{}_Obs_RO.xlsx'.format(wshed_name)))
 
     #select data for March-November
-    obs_data_months = obs_data_whole[obs_data_whole['Month'].astype(int) > 2]
+    obs_data_months = obs_data_whole[obs_data_whole['Month'].astype(int) > 3]
     obs_data_months = obs_data_months[obs_data_months['Month'].astype(int) < 12]
 
     #trim down data column to only include day, month, and year
@@ -57,7 +57,7 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
                         names = ebe_col_list, sep = '\s+', header=None)
 
     #select data for March-November
-    sel_mod_data = all_data[all_data['Month'] > 2] 
+    sel_mod_data = all_data[all_data['Month'] > 3] 
     mod_data_months = sel_mod_data[sel_mod_data['Month'] < 12]
 
 
@@ -89,95 +89,80 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         mod_data_months['Year'].replace(all_div_mod_yrs[year], key, inplace = True)
 
 
-    def get_obs_avgs(combined_df,var):
+    def get_obs_avgs(combined_df,var,crop_yrs):
 
         #Split data into two different dataframes by crop type
-        crop1_df = combined_df[combined_df['Year'].isin(crop1_yrs)]
-        crop2_df = combined_df[combined_df['Year'].isin(crop2_yrs)]
+        crop_df = combined_df[combined_df['Year'].isin(crop_yrs)]
 
         #set bins and months
         lower_bins = [0, 5, 10, 15, 20]
         upper_bins = [5, 10, 15, 20, 500]
-        months = [3,4,5,6,7,8,9,10,11]
+        months = [4,5,6,7,8,9,10,11]
 
         #create lists that will hold avg values for each month
         months_present = []
-        cal_avgs = []
-        val_avgs = []
+        cal_crop = []
+        val_crop = []
 
         for month in months:
             
             #create lists that will hold avg values by bin
-            cal_bin_avgs = []
-            val_bin_avgs = []
+            cal_crop_bins = []
+            val_crop_bins = []
 
             for low_bin, high_bin in zip(lower_bins, upper_bins):
 
                 #get data for month
-                bin_df1 = crop1_df[(crop1_df['RO'] > low_bin) & (crop1_df['RO'] < high_bin)]
-                month_df1 = bin_df1[bin_df1['Month'] == month]
-                
-                bin_df2 = crop2_df[(crop2_df['RO'] > low_bin) & (crop2_df['RO'] < high_bin)]
-                month_df2 = bin_df2[bin_df2['Month'] == month]
+                bin_df = crop_df[(crop_df['RO'] > low_bin) & (crop_df['RO'] < high_bin)]
+                month_df = bin_df[bin_df['Month'] == month]
 
 
                 #split dataframe into two equal dfs if total len is > 1
-                if len(month_df1) > 1:
+                if len(month_df) > 1:
 
                     #split into two sub_dataframes (returned type is a list)
-                    split_df1 = np.array_split(month_df1, 2)
+                    split_df = np.array_split(month_df, 2)
 
                 #create list that matches length of split dataframe if len is < 1
-                if len(month_df1) < 2:
+                if len(month_df) < 2:
 
-                    month_df1['RO'] = month_df1['RO'].astype(float) / 2
+                    month_df['RO'] = month_df['RO'].astype(float) / 2
 
-                    split_df1 = [month_df1,month_df1]
+                    split_df = [month_df,month_df]
 
-                #repeat for crop 2
-                if len(month_df2) > 1:
 
-                    split_df2 = np.array_split(month_df2, 2)
+                cal_crop_bins.append(split_df[0])
+                val_crop_bins.append(split_df[1])
 
-                if len(month_df2) < 2:
+            cal_crop_recomb = pd.concat(cal_crop_bins)
+            val_crop_recomb = pd.concat(val_crop_bins)
 
-                    month_df2['RO'] = month_df2['RO'].astype(float) / 2
-
-                    split_df2 = [month_df2, month_df2]
-
-                #combine crop1 and crop2 for each split (creates cal and val dfs)
-                cal_events = split_df1[0].append(split_df2[0])
-                val_events = split_df1[1].append(split_df2[1])
-
-                cal_bin_avgs.append(cal_events)
-                val_bin_avgs.append(val_events)
-
-            cal_data = pd.concat(cal_bin_avgs)
-            val_data = pd.concat(val_bin_avgs)
-            
             #get average of each df by dividing total sum by half of the 
             # observed years
-            cal_avg = cal_data[var].sum() / (len(obs_rot) / 2)
-            val_avg = val_data[var].sum() / (len(obs_rot) / 2)
+            cal_crop_avg = cal_crop_recomb[var].sum() / (len(crop1_yrs) / 2)
+            val_crop_avg = val_crop_recomb[var].sum() / (len(crop2_yrs) / 2)
+
 
             #append to lists created above
-            cal_avgs.append(cal_avg)
-            val_avgs.append(val_avg)
+            cal_crop.append(cal_crop_avg)
+            val_crop.append(val_crop_avg)
             months_present.append(month)
 
         #Put average monthly totals into dataframe with columns for month, cal vals, and val vals
-        output_df = pd.DataFrame({'cal_{}'.format(var):cal_avgs,\
-                                 'val_{}'.format(var):val_avgs,\
-                                 'Month':months_present})
+        output_df = pd.DataFrame({'cal_{}'.format(var):cal_crop,\
+                                  'val_{}'.format(var):val_crop,\
+                                  'Month':months_present})
 
 
         return output_df
 
-    obs_avgs = get_obs_avgs(obs_data_months, 'RO')
+    obs_avgs_crop1 = get_obs_avgs(obs_data_months, 'RO', crop1_yrs)
+    obs_avgs_crop2 = get_obs_avgs(obs_data_months, 'RO', crop2_yrs)
 
-    output_dic[str(wshed + '_obs')] = obs_avgs
+    obs_dic['{}_{}_obs'.format(wshed,crop1_name)] = obs_avgs_crop1
+    obs_dic['{}_{}_obs'.format(wshed,crop2_name)] = obs_avgs_crop2
 
-    print(obs_avgs)
+    print(obs_avgs_crop1)
 
 
     ####### select runoff events that will be used in statistical tests #########
@@ -203,20 +188,22 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
         select_data = input[input['Year'].isin(yr_selection)]
 
         #get monthly averages for input data
-        monthly_df = select_data.groupby('Month')[var].sum() / len(all_yrs)
+        monthly_df = select_data.groupby('Month')[var].sum() / len(yr_selection)
 
         #fill in 0mm months with 0 by using merge
-        months_df = pd.DataFrame({'Month':[3,4,5,6,7,8,9,10,11]})
+        months_df = pd.DataFrame({'Month':[4,5,6,7,8,9,10,11]})
         merged_df = months_df.merge(monthly_df.reset_index(), on = ['Month'], how = 'left', validate='one_to_one').fillna(0)
         monthly_avgs = merged_df
 
         return monthly_avgs
     
-    mod_avgs = get_mod_avgs(obs_rot, mod_data_months, 'RO')
+    mod_crop1_avgs = get_mod_avgs(crop1_yrs, mod_data_months, 'RO')
+    mod_crop2_avgs = get_mod_avgs(crop2_yrs, mod_data_months, 'RO')
 
-    output_dic[str(wshed + '_mod')] = mod_avgs
+    WEPP_dic['{}_{}'.format(wshed, crop1_name)] = mod_crop1_avgs
+    WEPP_dic['{}_{}'.format(wshed, crop2_name)] = mod_crop2_avgs
 
-    print(mod_avgs)
+    print(mod_crop1_avgs)
 
 
     def evalulate_mod_outputs(obs, mod):
@@ -253,9 +240,11 @@ def calibrate_wepp_RO(wshed_path, wshed_name, clim_mod, cal_dir, crop1_yrs, crop
 
         return output_df
 
-    output_stats = evalulate_mod_outputs(obs_avgs, mod_avgs)
+    output_stats_crop1 = evalulate_mod_outputs(obs_avgs_crop1, mod_crop1_avgs)
+    output_stats_crop2 = evalulate_mod_outputs(obs_avgs_crop2, mod_crop2_avgs)
 
-    print(output_stats)
+    print('crop1',output_stats_crop1)
+    print('crop2', output_stats_crop2)
 
 ###### Prepare function parameters and run calibrate_wepp_RO #######
 
@@ -281,8 +270,8 @@ obs_rot_yrs = [[2012,2013,2014,2015,2016],\
                 [2011,2012,2013,2014,2015,2016,2017]]
 
 lst_crop1_yrs = [[2013,2015], [2013,2015,2017,2019],\
-                     [2011,2012],[2015,2016,2017,2019],\
-                     [2011,2012,2013]]
+                 [2011,2012],[2015,2016,2017,2019],\
+                 [2011,2012,2013]]
 
 lst_crop2_yrs = [[2012,2014,2016],[2014,2016,2018],\
                      [2013,2014,2015,2016],[2014,2018],\
@@ -301,91 +290,104 @@ lst_val_yrs = [[2015,2016],\
                [2013,2016,2017]]
 
 
-cal_dirs = ['DF_Comp10']
+cal_dirs = ['DF_Comp','DF_Comp', 'DF_Comp','DF_Comp3', 'DF_Comp']
 
 output_params = []
-monthly_avgs = {}
+WEPP_dic = {}
+obs_dic = {}
 
-for wshed, crop1_yrs, crop2_yrs, mod_rot_starters, obs_rot, cal_yrs, val_yrs\
-    in zip(wshed_lst, lst_crop1_yrs, lst_crop2_yrs, lst_mod_rot_starts_wshed, obs_rot_yrs,\
-           lst_cal_yrs, lst_val_yrs):
+for (cal_dir, wshed, crop1_yrs, crop2_yrs, mod_rot_starters, obs_rot, crop1_name, crop2_name)\
+    in zip(cal_dirs, wshed_lst, lst_crop1_yrs, lst_crop2_yrs, lst_mod_rot_starts_wshed, obs_rot_yrs,\
+           crop1_names, crop2_names):
 
     wshed_path = str('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/'.format(wshed))
 
-    for cal_dir in cal_dirs:
-
-        calibrate_wepp_RO(wshed_path, wshed, 'Obs', cal_dir, crop1_yrs, crop2_yrs, mod_rot_starters,\
-                        obs_rot, cal_yrs, val_yrs, monthly_avgs)
-
-
+    calibrate_wepp_RO(wshed_path, wshed, 'Obs', cal_dir, crop1_yrs, crop2_yrs, mod_rot_starters,\
+                      obs_rot, crop1_name, crop2_name)
 
 
 ########## GRAPH DATA #############
+import matplotlib.pyplot as plt
 
-def graph_monthly_avgs(mod_var, obs_var, input_dic, Ke_adj, Ke_outlab):
-    '''
-    Graph monthly averages from each DF site vs WEPP
-    comparison
+#set up colors for crops in each watershed
+crop_colors1 = ['orange', 'orange', 'purple', 'orange', 'orange']
+crop_colors2 = ['green', 'green', 'orange', 'green', 'purple']
 
-    mod_var = modeled variable
-    obs_var = observed variable
-    input_dic = dictionary with monthly avg data
-
-    Saves figure as png
-    '''
-
-    import matplotlib.axes as axs
-    import matplotlib.pyplot as plt
+#Define x/y axis coordinates for each plot
+subx_vals = [0,0,1,1,0]
+suby_vals = [0,1,0,1,2]
 
 
-    #Define x/y axis coordinates for each plot
-    subx_vals = [0,0,1,1,0]
-    suby_vals = [0,1,0,1,2]
+#Set up a subplot for each watershed that contains plots for each watershed
+fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (16, 12))
 
+#loop through watershed, crops, colors for crops, and the subplot x,y coords
+for wshed, crop1, color1, crop2, color2, subx, suby in \
+    zip(wshed_lst, crop1_names, crop_colors1, crop2_names, crop_colors2, \
+        subx_vals, suby_vals):
 
-    #Set up a subplot for each watershed that contains plots for each watershed
-    fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (16, 12))
+    #loop through dataframes in dict with modeled data
+    for mod_df in WEPP_dic:
 
-    #loop through watershed, crops, colors for crops, and the subplot x,y coords
-    for wshed, subx, suby in zip(wshed_lst, subx_vals, suby_vals): 
+        #define watershed and crop name for each iteration
+        crop_name = str(mod_df[4::])
 
-        obs_df = str(wshed + '_obs')
-        mod_df = str(wshed + '_mod')
+        #Define colors and plot names for each crop
+        if crop_name == crop1:
+            color = color1
+            crop_lab = crop1
+        if crop_name == crop2:
+            color = color2
+            crop_lab = crop2
 
-        axes[subx, suby].plot(input_dic[mod_df]['Month'], input_dic[mod_df][mod_var],\
-                              marker = 'o', label = 'WEPP Runoff', alpha = 1)
+        #specify which modeled data to use based on climate model short ID
+        if mod_df.startswith(wshed):
+            axes[subx, suby].plot(WEPP_dic[mod_df]['Month'], WEPP_dic[mod_df]['RO'],\
+                                marker = 'o', label = 'WEPP Runoff - {}'.format(crop_lab), color = color,\
+                                alpha = 1)
 
+    #loop through dataframes in observed dict
+    for obs_df in obs_dic:
+
+        #repeat above for observed data
+        crop_name = str(obs_df[4::])
+        crop_name = crop_name[:-4]
+
+        #Define colors and crop names to use in scatter plots for each crop
+        if crop_name == crop1:
+            color = color1
+            crop_lab = crop1
+        if crop_name == crop2:
+            color = color2
+            crop_lab = crop2
         
-            
-        axes[subx, suby].plot(input_dic[obs_df]['Month'], input_dic[obs_df][obs_var],\
-                              marker = '^', label = 'Observed Data', linestyle = 'dashed', alpha = 0.7)
+        if obs_df.startswith(wshed):
+            axes[subx, suby].plot(obs_dic[obs_df]['Month'], obs_dic[obs_df]['cal_RO'],\
+                                marker = '^', label = 'Observed Data - {}'.format(crop_lab), color = color,\
+                                linestyle = 'dashed' ,alpha = 0.7)
 
 
-        axes[subx,suby].set_xlabel('Month')
-        axes[subx,suby].set_ylabel('Average Total Runoff (mm)')
+    axes[subx,suby].set_xlabel('Month')
+    axes[subx,suby].set_ylabel('Average Total Runoff (mm)')
 
-        #Add sub-title
-        axes[subx,suby].set_title(wshed)
+    #Add sub-title
+    axes[subx,suby].set_title(wshed)
 
-    #remove blank plot that is generated
-    fig.delaxes(axes[1][2])
+#remove blank plot that is generated
+fig.delaxes(axes[1][2])
 
-    #Add title to grouping of subplots
-    fig.suptitle('WEPP Outputs {} vs DF Site Data:\n Average Total Monthly Runoff'\
-                  .format(Ke_adj),\
-                fontsize = 14)
+#Add title to grouping of subplots
+fig.suptitle('WEPP Outputs Adjust Management vs DF Site Data:\n Average Total Monthly Runoff',\
+              fontsize = 14)
 
-    #Create single legend without replicate items
-    h1, l1 = fig.axes[0].get_legend_handles_labels()
+#Create single legend without replicate items
+h1, l1 = fig.axes[0].get_legend_handles_labels()
+h2, l2 = fig.axes[2].get_legend_handles_labels()
 
-    fig.legend(h1, l1, bbox_to_anchor = [0.83,0.26], loc = 'lower right')
+fig.legend(h1+h2, l1+l2, bbox_to_anchor = [0.86,0.24], loc = 'lower right')
 
-    #save figure to comparisons folder
-    fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/WEPPvDF_RO_cal{}.png'\
-                .format(Ke_outlab)
-
-    fig.savefig(fig_path)
-
-graph_monthly_avgs('RO', 'cal_RO', monthly_avgs, 'Ke x 10', 'Ke10')
+#save figure to comparisons folder
+fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/WEPPvDF_RO_indsim.png'
+fig.savefig(fig_path)
 
 #%%

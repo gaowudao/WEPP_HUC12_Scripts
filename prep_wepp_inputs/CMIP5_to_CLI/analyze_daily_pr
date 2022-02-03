@@ -1,0 +1,151 @@
+#%%
+
+def analyze_cli(obs_dir, wshed, cli_dir, hillID, input_years):
+    import pandas as pd
+    import numpy as np
+    import hydroeval as he
+
+    #Create path to daily MnDNR data and read into df
+    MnDNR_daily_xlsx = str(obs_dir + '{}_daily_MnDNR_sub.xlsx'.format(wshed))
+    MnDNR_df = pd.read_excel(MnDNR_daily_xlsx)
+    MnDNR_df['DNR_pr'] = (MnDNR_df['Pr'].apply(pd.to_numeric, errors='coerce')) * 25.4
+
+    #Read in and prep cligen data
+    cli_df = pd.read_csv(str(cli_dir + '/{}.cli'.format(hillID)), skiprows = 13, sep = '\s+| ', engine = 'python')
+    cli_df.drop([0,], axis = 0, inplace = True)
+    cli_df.reset_index(inplace = True)
+    per_cli_df = cli_df[cli_df['year'].astype(int).isin(input_years)]
+    per_cli_df['cli_pr'] = per_cli_df['prcp'].astype(float)
+
+    per_cli_df.reset_index(inplace = True)
+
+    #concatenate cligen precip column to MnDNR df and return new df
+    comb_df = pd.concat([MnDNR_df, per_cli_df['cli_pr']], axis=1)
+
+    #If MnDNR col is missing data, fill in with cligen data using np.where()
+    comb_df['filled_pr'] = (np.where(comb_df['DNR_pr'].isna(),\
+                                     comb_df['cli_pr'],\
+                                     comb_df['DNR_pr']))
+
+    obs_monthly = comb_df.groupby('Month')['filled_pr'].sum() / len(input_years)
+    mod_monthly = comb_df.groupby('Month')['cli_pr'].sum() / len(input_years)
+
+    nse_daily = he.evaluator(he.nse, comb_df['filled_pr'], comb_df['cli_pr'])
+    nse_monthly = he.evaluator(he.nse, obs_monthly, mod_monthly)
+
+    print(wshed, nse_daily)
+    print(wshed, nse_monthly)
+
+    return comb_df, obs_monthly, mod_monthly
+
+#create list of watershed IDs, simulated hillslope IDs, and number 
+#of years in each observed crop rotation (crop rot = simulation period)
+wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
+hillslopes = ['p221', 'p206', 'p66', 'p77', 'p154']
+num_obs_yrs = [5,7,6,6,7]
+wshed_sim_periods = {}
+
+def split_cli_yrs(n):
+    '''
+    Splits the cligen years (55 in total) into seven simulation periods. The number
+    of years in each period is equal to the length of the observed crop rotation
+
+    n = number of years in observed crop rotation 
+    '''
+    #number of simulation periods
+    p = 7
+
+    #create list for every year to be tested (simulation period years combined)
+    lst = list(range(1,n*p+1))
+
+    #break lst into p number of nested sub-lists that contain the years associated
+    #with each period
+    sim_periods = [lst[i:i + n] for i in range(0, len(lst), n)]
+
+    return sim_periods
+
+for n,wshed in zip(num_obs_yrs,wshed_lst):
+    wshed_sim_periods[wshed] = split_cli_yrs(n)
+
+pr_dic = {}
+obs_month_dic = {}
+mod_month_dic = {}
+
+for i in range(0,7):
+    for wshed, hill in zip(wshed_lst,hillslopes):
+
+        input_years = wshed_sim_periods[wshed][i]
+        sim_ID = 'sim{}'.format(i+1)
+        print(sim_ID, input_years)
+
+        #set directory paths to mndnr and cligen data
+        obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/'.format(wshed)
+        cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/DF_Comp/backups/'.format(wshed)
+
+        output_df, obs_months, mod_months = analyze_cli(obs_dir, wshed, cli_dir, hill, input_years)
+        pr_dic[str(wshed + sim_ID)] = output_df
+        obs_month_dic[str(wshed + sim_ID)] = obs_months
+        mod_month_dic[str(wshed + sim_ID)] = mod_months
+
+
+
+
+########## GRAPH DATA #############
+import matplotlib.pyplot as plt
+
+#Define x/y axis coordinates for each plot
+subx_vals = [0,0,0,1,1]
+suby_vals = [0,1,2,0,1]
+
+for n in range(0,7):
+
+    sim_ID = 'sim{}'.format(n+1)
+    sim_lab ='Simulation #{}'.format(n+1)
+
+    #Set up a subplot for each watershed that contains plots for each watershed
+    fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (16, 12))
+
+    #loop through watershed, crops, colors for crops, and the subplot x,y coords
+    for wshed, subx, suby in zip(wshed_lst, subx_vals, suby_vals):
+
+
+        axes[subx, suby].plot(mod_month_dic[str(wshed+sim_ID)].index,\
+                              mod_month_dic[str(wshed+sim_ID)],\
+                            label = 'Cligen Data',
+                            color = 'darkblue',\
+                            alpha = 0.95,\
+                            marker = 'o')
+
+
+        axes[subx, suby].plot(obs_month_dic[str(wshed+sim_ID)].index,\
+                              obs_month_dic[str(wshed+sim_ID)],\
+                            label = 'MnDNR Data',\
+                            color = 'cyan',
+                            alpha = 0.95,\
+                            marker = '^',\
+                            linestyle = 'dashed')
+
+
+        axes[subx,suby].set_xlabel('Month')
+        axes[subx,suby].set_ylabel('Average Monthly Precipitation (mm)')
+
+        #Add sub-title
+        axes[subx,suby].set_title(wshed)
+
+    #remove blank plot that is generated
+    fig.delaxes(axes[1][2])
+
+    #Add title to grouping of subplots
+    fig.suptitle('Cligen Generated Monthly Precip vs MnDNR Observed Monthly Precip \n {}'.format(sim_lab),\
+                 fontsize = 14)
+
+    #Create single legend without replicate items
+    h1, l1 = fig.axes[0].get_legend_handles_labels()
+
+    fig.legend(h1, l1, bbox_to_anchor = [0.86,0.24], loc = 'lower right')
+
+    #save figure to comparisons folder
+    fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/cligen_vs_MnDNR_{}.png'.format(sim_ID)
+    fig.savefig(fig_path)
+
+#%%

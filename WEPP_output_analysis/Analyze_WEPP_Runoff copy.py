@@ -282,6 +282,9 @@ for wshed, addyr, start1, start2, obs1, obs2, name1, name2, hills, TSS_adjust\
     analyze_RO_TSS(addyr, start1, start2, obs1, obs2, name1, name2,\
                scen_dir, mod_labels, obs_path, wshed, excel_path, '_MnDNR_5Ke', hills, TSS_adjust)
 
+print(obs_dic)
+print(WEPP_dic)
+
 
 
 ########## GRAPH DATA #############

@@ -1,0 +1,41 @@
+def sub_obs(obs_dir, wshed, cli_dir, hillID):
+    import pandas as pd
+    import numpy as np
+
+    #Create path to daily MnDNR data and read into df
+    MnDNR_daily_xlsx = str(obs_dir + '{}_daily_MnDNR_sub.xlsx'.format(wshed))
+    MnDNR_df = pd.read_excel(MnDNR_daily_xlsx)
+    MnDNR_df['DNR_pr'] = (MnDNR_df['Pr'].apply(pd.to_numeric, errors='coerce')) * 25.4
+
+    #Read in and prep cligen data
+    cli_df = pd.read_csv(str(cli_dir + '/{}.cli'.format(hillID)), skiprows = 13, sep = '\s+| ', engine = 'python')
+    cli_df.drop([0,], axis = 0, inplace = True)
+
+    #concatenate cligen precip column to MnDNR df and return new df
+    comb_df = pd.concat([MnDNR_df, cli_df['prcp']], axis=1)
+
+    #If MnDNR col is missing data, fill in with cligen data using np.where()
+    comb_df['filled_pr'] = (np.where(comb_df['DNR_pr'].isna(),\
+                                    comb_df['prcp'],\
+                                    comb_df['DNR_pr']))
+
+    #substitue filled observed data into cli_df
+    cli_df['prcp'] = round(comb_df['filled_pr'].astype(float), 1)
+
+    cli_df.to_excel(str(cli_dir + '{}.xlsx'.format(hillID)))
+
+
+#create list of watershed IDs, simulated hillslope IDs, and number 
+#of years in each observed crop rotation (crop rot = simulation period)
+wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
+hillslopes = ['p221', 'p206', 'p66', 'p77', 'p154']
+
+
+
+for wshed, hill in zip(wshed_lst,hillslopes):
+
+    #set directory paths to mndnr and cligen data
+    obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/'.format(wshed)
+    cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/DF_Comp/Obs/wepp/runs/'.format(wshed)
+
+    sub_obs(obs_dir, wshed, cli_dir, hill)

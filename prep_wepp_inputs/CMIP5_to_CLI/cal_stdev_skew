@@ -74,7 +74,7 @@ def analyze_cli(obs_dir, wshed, data_len, top_path, clim_mod, loc):
         file.close()
 
 
-obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/RO1/obs_data/'
-top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/RO1/GDS/Obs/obs_sub/'
+obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/obs_data/'
+top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/GDS/Obs/obs_sub/'
 
-analyze_cli(obs_dir, 'RO1', '_sub', top_path, 'B3', '2')
+analyze_cli(obs_dir, 'DO1', '_sub', top_path, 'B3', '2')
