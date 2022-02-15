@@ -14,9 +14,9 @@ def run_wepp(wepppy_win_dir, scen_dir, model_labs):
         cli_scen_dir = str(scen_dir + mod_lab)
         os.system('python3 run_project.py {}'.format(cli_scen_dir))
 
-wshed_lst = ['DO1']
+wshed_lst = ['ST1']
 wepppy_win_dir = 'C:/Users/Garner/Soil_Erosion_Project/wepppy-win-bootstrap-master/scripts'
-model_labs = ['Obs/']
+model_labs = ['Obs_full/']
 
 for wshed in wshed_lst:
     HUC12_path = str('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/'.format(wshed))

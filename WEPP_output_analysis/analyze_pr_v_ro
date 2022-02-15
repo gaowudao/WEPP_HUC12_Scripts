@@ -1,0 +1,249 @@
+import pandas as pd
+import numpy as np
+import os
+
+def analyze_PRvRO(season,month_low, month_high):
+    '''
+    Analyze wepp and obs precip vs runoff 
+
+    season = season name
+
+    month_low = numerical cutoff for first month in season
+
+    month_high = integer corresponding to month after final month in season
+    (i.e. 6 for spring (if month < 6...))
+
+    Spring does not include march due to frozen soil
+    '''
+
+    def prep_data(obs_dir, wshed, cli_dir, mod_yrs, wepp_out_dir, hillID, obs_rot):
+        '''
+        load in and prep data for graphing
+
+        obs_dir = directory containing observed data
+        wshed = watershed/site name
+        cli_dir = directory containing cligen file (same as wepp run dir)
+        wepp_out_dir = directory containing wepp output files
+        hillID = ID of WEPP hillslope in simulated site run
+        '''
+
+        ###### load in climate data and fill in missing obs values ######
+
+        #Create path to daily DF data and read into df
+        DF_daily_xlsx = str(obs_dir + '{}_daily_DF.xlsx'.format(wshed))
+        DF_df = pd.read_excel(DF_daily_xlsx)
+        DF_df['DNR_pr'] = (DF_df['Pr'].apply(pd.to_numeric, errors='coerce')) * 25.4
+
+        #Read in and prep cligen data
+        cli_df = pd.read_csv(str(cli_dir + '/{}.cli'.format(hillID)), skiprows = 13, sep = '\s+| ', engine = 'python')
+        cli_df.drop([0,], axis = 0, inplace = True)
+        cli_df.reset_index(inplace = True)
+        cli_df['cli_pr'] = cli_df['prcp'].astype(float)
+        cli_sub = cli_df[cli_df['year'].astype(int).isin(mod_yrs)].reset_index()
+
+        #concatenate cligen precip column to DF df and return new df
+        comb_df = pd.concat([DF_df, cli_sub['cli_pr']], axis=1)
+
+        #If DF col is missing data, fill in with cligen data using np.where()
+        comb_df['filled_pr'] = (np.where(comb_df['DNR_pr'].isna(),\
+                                        comb_df['cli_pr'],\
+                                        comb_df['DNR_pr']))
+        
+
+        ###### Load in runoff data ######
+
+        #Load in observed data (whole dataset)
+        obs_data_whole = pd.read_excel(str(obs_dir + '/{}_Obs_RO.xlsx'.format(wshed)))
+
+        #select data for March-November
+        obs_data_months = obs_data_whole[obs_data_whole['Month'].astype(int) > month_low]
+        obs_data_months = obs_data_months[obs_data_months['Month'].astype(int) < month_high]
+
+        #trim down data column to only include day, month, and year
+        obs_data_months['Date'] = obs_data_months['Date'].astype(str).str[0:10]
+
+        #observed data occasionally has multiple events on same day. Combine these into daily values
+        aggregation_functions = {'Date': 'first', 'Year': 'first', 'Month': 'first',\
+                                'Day':'first', 'RO (in)':'sum', 'TSS (lbs/ac)':'sum'}
+
+        obs_data_months = obs_data_months.groupby(obs_data_months['Date']).aggregate(aggregation_functions)
+
+        #convert runoff from in to mm in observed data
+        obs_data_months['RO'] = obs_data_months['RO (in)'] * 25.4
+
+
+        #Read in data from ebe WEPP output file for a specified calibration scenario
+
+
+        #get ebe file from output directory
+        hillslopes = [x for x in os.listdir(wepp_out_dir) if x.endswith('.ebe.dat')]
+
+        #only one hillslope in DF simulations so just select first file in list
+        hill = hillslopes[0]
+
+        #define column names for ebe file load in
+        ebe_col_list = ['Day', 'Month', 'Year', 'Precip', 'RO', 'IR-det',\
+                        'Av-det', 'Mx-det', 'Point', 'Av-dep', 'Mx-dep',\
+                        'Point_2', 'Sed-Del', 'ER']
+
+        #read in ebe file to dataframe
+        all_data = pd.read_csv(str(wepp_out_dir+hill), skiprows = 3,\
+                            names = ebe_col_list, sep = '\s+', header=None)
+
+        #select data for March-November
+        sel_mod_data = all_data[all_data['Month'] > month_low] 
+        mod_data_months = sel_mod_data[sel_mod_data['Month'] < month_high]
+
+        print(mod_data_months)
+
+
+
+        ###### prep average monthly data ######
+
+
+        ## Obs data
+
+        
+        #merge observed precip to observed runoff
+        obs_df = pd.merge(obs_data_months, comb_df, on = ['Year', 'Month', 'Day'], how = 'left')
+
+        print(wshed)
+
+        months = [4,5,6,7,8,9,10,11]
+
+        #get avg mod and obs RO 
+        avg_obs_RO = obs_df.groupby('Month')['RO'].sum() / len(obs_rot)
+        avg_mod_RO = mod_data_months.groupby('Month')['RO'].sum() / 55
+
+        months_df = pd.DataFrame({'Month':months})
+
+        #fill in any missing months with a value of 0
+        obs_filled= months_df.merge(avg_obs_RO, on = ['Month'], how = 'left', validate='one_to_one').fillna(0).set_index('Month')
+        mod_filled = months_df.merge(avg_mod_RO, on = ['Month'], how = 'left', validate='one_to_one').fillna(0).set_index('Month')
+
+        #get monthly avg precip values for April-November
+        sel_obs_pr = comb_df[comb_df['Month'] > 3] 
+        obs_pr = sel_obs_pr[sel_obs_pr['Month'] < 12]
+        
+        cli_df['Month'] = cli_df['mo'].astype(int)
+        sel_cli_pr = cli_df[cli_df['Month'] > 3] 
+        cli_pr = sel_cli_pr[sel_cli_pr['Month'] < 12]
+
+        avg_obs_pr = obs_pr.groupby('Month')['filled_pr'].sum() / len(obs_rot)
+        avg_mod_pr = cli_pr.groupby('Month')['cli_pr'].sum() / 55
+
+        output_df = pd.DataFrame({'Month':months,\
+                                  'obs_RO':obs_filled['RO'],\
+                                  'obs_PR':avg_obs_pr,\
+                                  'mod_RO':mod_filled['RO'],\
+                                  'mod_PR':avg_mod_pr})
+
+        #return dfs with monthly averages and daily values
+        return output_df, obs_df, mod_data_months
+
+
+    #create list of watershed IDs, simulated hillslope IDs, and number 
+    #of years in each observed crop rotation (crop rot = simulation period)
+    wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
+    hillslopes = ['p221', 'p206', 'p66', 'p77', 'p154']
+    ke_mods = ['No Ke Adj', 'No Ke Adj','No Ke Adj','Ke x 5','No Ke Adj']
+    mod_dir_lst = ['DF_Comp/Obs_full',\
+                   'DF_Comp/Obs_full',\
+                   'DF_Comp/Obs_full',\
+                   'DF_Comp5/Obs_full',\
+                   'DF_Comp/Obs_full']
+
+    #prep lists for mod starts, obs years, and years for each crop
+
+    obs_rot_yrs = [[2012,2013,2014,2015,2016],\
+                [2013,2014,2015,2016,2017,2018,2019],\
+                [2011,2012,2013,2014,2015,2016],\
+                [2014,2015,2016,2017,2018,2019],\
+                [2011,2012,2013,2014,2015,2016,2017]]
+
+    mod_cli_yrs = [[11,12,13,14,15],\
+                   [22,23,24,25,26,27,28],\
+                   [31,32,33,34,35,36],\
+                   [13,14,15,16,17,18],\
+                   [8,9,10,11,12,13,14]]
+
+    avgs_dic = {}
+    obs_dic = {}
+    mod_dic = {}
+
+    for wshed, hill, mod_dir, mod_yrs, obs_rot in zip(wshed_lst, hillslopes, mod_dir_lst, mod_cli_yrs, obs_rot_yrs):
+
+        #set directory paths to DF and cligen data
+        obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/'.format(wshed)
+        cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/wepp/runs/'.format(wshed,mod_dir)
+        wepp_out_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/wepp/output/'.format(wshed,mod_dir)
+
+        avgs_dic[wshed], obs_dic[wshed], mod_dic[wshed] = prep_data(obs_dir,\
+                                                          wshed,\
+                                                          cli_dir,\
+                                                          mod_yrs,\
+                                                          wepp_out_dir,\
+                                                          hill,\
+                                                          obs_rot)
+
+
+    import matplotlib.pyplot as plt
+    from scipy.stats import gaussian_kde
+
+    #Define x/y axis coordinates for each plot
+    subx_vals = [0,0,1,1,0]
+    suby_vals = [0,1,0,1,2]
+
+    def graph_Pr_RO(dic, col_lab1, col_lab2, x_lab, y_lab, title, out_name, comp_type):
+        '''
+        dic = dictionary input option
+        season = name of season
+        title = partial title insert being assigned to output figure
+        col_lab1/2 = column label for variables (different between obs and mod)
+        '''
+
+        #Set up a subplot for each watershed that contains plots for each watershed
+        fig, axes = plt.subplots(nrows = 2, ncols = 3, figsize = (16, 12))
+
+        #loop through watershed, crops, colors for crops, and the subplot x,y coords
+        for wshed, subx, suby, ke_mod in \
+            zip(wshed_lst, subx_vals, suby_vals, ke_mods):
+
+            x = dic[wshed][col_lab1]
+            y = dic[wshed][col_lab2]
+
+            plot_lab = 'Precipitation vs Runoff'
+
+            #plot data
+            axes[subx, suby].scatter(x,\
+                                     y,\
+                                     marker = 'o',\
+                                     label = plot_lab)
+
+            axes[subx,suby].set_xlabel('{} (mm)'.format(x_lab))
+            axes[subx,suby].set_ylabel('{} (mm)'.format(y_lab))
+
+            #Add sub-title
+            axes[subx,suby].set_title('{} - {}'.format(wshed,ke_mod))
+
+        #remove blank plot that is generated
+        fig.delaxes(axes[1][2])
+
+        #Add title to grouping of subplots
+        fig.suptitle(title, fontsize = 14)
+
+        #Create single legend without replicate items
+        h1, l1 = fig.axes[0].get_legend_handles_labels()
+
+        fig.legend(h1, l1, bbox_to_anchor = [0.86,0.24], loc = 'lower right')
+
+        #save figure to comparisons folder
+        fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/{}_{}_{}.png'.format(out_name,comp_type,season)
+        fig.savefig(fig_path)
+
+    title = 'Runoff vs Precip for {} WEPP Simulations'.format(season)
+    graph_Pr_RO(mod_dic, 'Precip', 'RO', 'Precipitation', 'Runoff', title, 'WEPP_KeAdj', 'PRvsRO')
+
+analyze_PRvRO('Spring',3, 6)
+analyze_PRvRO('Summer',5, 9)
+analyze_PRvRO('Fall',8, 12)

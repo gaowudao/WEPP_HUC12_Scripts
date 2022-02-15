@@ -36,11 +36,12 @@ def gen_cli_file(site_name,par_path):
 
             os.system("cligen53.exe -b1 -y{} -i{} -o{}.cli -t5".format(years,file,str(file)[:-4]))
 
+
     print('Generating .cli file from .par file...')
     par_to_cli(par_path,par_files)
 
-top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/GDS/Obs/obs_sub/'
-par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/PAR/Obs/obs_sub/'
-site_name = 'DO1'
+top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/GDS/Obs/obs_sub/'
+par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/PAR/Obs/obs_sub/'
+site_name = 'ST1'
 
 gen_cli_file(site_name,par_path)

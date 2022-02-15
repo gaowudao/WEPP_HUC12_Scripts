@@ -42,6 +42,11 @@ def analyze_cli(obs_dir, wshed, cli_dir, hillID, input_years):
 #of years in each observed crop rotation (crop rot = simulation period)
 wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
 hillslopes = ['p221', 'p206', 'p66', 'p77', 'p154']
+mod_dirs = ['DF_Comp3/Obs_full',\
+            'DF_Comp3/Obs_full',\
+            'DF_Comp3/Obs_full',\
+            'DF_Comp5/Obs_full',\
+            'DF_Comp/Obs_full']
 num_obs_yrs = [5,7,6,6,7]
 wshed_sim_periods = {}
 
@@ -72,7 +77,7 @@ obs_month_dic = {}
 mod_month_dic = {}
 
 for i in range(0,7):
-    for wshed, hill in zip(wshed_lst,hillslopes):
+    for wshed, hill, mod_dir in zip(wshed_lst,hillslopes,mod_dirs):
 
         input_years = wshed_sim_periods[wshed][i]
         sim_ID = 'sim{}'.format(i+1)
@@ -80,7 +85,7 @@ for i in range(0,7):
 
         #set directory paths to mndnr and cligen data
         obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/'.format(wshed)
-        cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/DF_Comp/backups/'.format(wshed)
+        cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/wepp/runs/'.format(wshed,mod_dir)
 
         output_df, obs_months, mod_months = analyze_cli(obs_dir, wshed, cli_dir, hill, input_years)
         pr_dic[str(wshed + sim_ID)] = output_df
