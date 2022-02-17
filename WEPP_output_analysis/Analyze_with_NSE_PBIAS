@@ -253,6 +253,12 @@ def NSE_PBIAS_Analysis(obs_dir, wshed, cli_dir, wepp_out_dir, hillID, mod_yrs, T
 
         print(nse_pbias_df)
 
+        #write pr/ro/TSS values and nse/pbias outcomes to excel
+        writer = pd.ExcelWriter('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/NSE_PBIAS/{}_TSS.xlsx'.format(wshed))
+        mean_vals.to_excel(writer, "RO-TSS Values", index=False)
+        nse_pbias_df.to_excel(writer, "Stat Tests", index=False)
+        writer.save()
+
         return mean_vals, nse_pbias_df
 
     avg_vals, nse_pbias_vals = compare_mod_obs(obs_df, comb_df_sel)
@@ -449,6 +455,10 @@ def graph_Pr_RO(in_dic, x_lab, y_lab, title, out_name, comp_type, col_lab1, col_
     fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/{}_{}.png'.format(out_name,comp_type)
     fig.savefig(fig_path)
 
-TSS_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Soil Detachment"
+RO_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Runoff"
+RR_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Monthly Runoff Ratios"
+TSS_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Soil Detachment"
 
+graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Runoff (mm)', RO_title, 'Monthly', 'avgRO', 'obs_RO', 'mod_RO', 'NSE_RO', 'PBIAS_RO')
+graph_Pr_RO(avg_vals_dic, 'Month', 'Runoff Ratio', RR_title, 'Monthly', 'avgRR', 'obs_RR', 'mod_RR', 'NSE_RR', 'PBIAS_RR')
 graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Soil Detachment (tons/ha)', TSS_title, 'Monthly', 'avgTSS', 'obs_TSS', 'mod_TSS', 'NSE_TSS', 'PBIAS_TSS')

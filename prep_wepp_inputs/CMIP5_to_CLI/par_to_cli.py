@@ -40,8 +40,8 @@ def gen_cli_file(site_name,par_path):
     print('Generating .cli file from .par file...')
     par_to_cli(par_path,par_files)
 
-top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/GDS/Obs/obs_sub/'
-par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/ST1/PAR/Obs/obs_sub/'
-site_name = 'ST1'
+top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/GDS/Obs/obs_sub/'
+par_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/GO1/PAR/Obs/obs_sub/'
+site_name = 'GO1'
 
 gen_cli_file(site_name,par_path)
