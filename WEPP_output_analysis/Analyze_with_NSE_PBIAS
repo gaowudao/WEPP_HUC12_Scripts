@@ -254,7 +254,7 @@ def NSE_PBIAS_Analysis(obs_dir, wshed, cli_dir, wepp_out_dir, hillID, mod_yrs, T
         print(nse_pbias_df)
 
         #write pr/ro/TSS values and nse/pbias outcomes to excel
-        writer = pd.ExcelWriter('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/NSE_PBIAS/{}_TSS.xlsx'.format(wshed))
+        writer = pd.ExcelWriter('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/NSE_PBIAS/{}_uncal.xlsx'.format(wshed))
         mean_vals.to_excel(writer, "RO-TSS Values", index=False)
         nse_pbias_df.to_excel(writer, "Stat Tests", index=False)
         writer.save()
@@ -271,11 +271,11 @@ def NSE_PBIAS_Analysis(obs_dir, wshed, cli_dir, wepp_out_dir, hillID, mod_yrs, T
 #of years in each observed crop rotation (crop rot = simulation period)
 wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
 hillslopes = ['p221', 'p206', 'p66', 'p77', 'p154']
-ke_mods = ['Ke x 3', 'Ke x 0.5','Ke x 3','Ke x 5','No Ke Adj', '']
-mod_dir_lst = ['DF_Comp3/Obs_full',\
-                'DF_Comp3/Obs_full',\
-                'DF_Comp3/Obs_full',\
-                'DF_Comp5/Obs_full',\
+ke_mods = ['No Ke Adj', 'No Ke Adj','No Ke Adj','No Ke Adj','No Ke Adj', '']
+mod_dir_lst = ['DF_Comp/Obs_full',\
+                'DF_Comp/Obs_full',\
+                'DF_Comp/Obs_full',\
+                'DF_Comp/Obs_full',\
                 'DF_Comp/Obs_full']
 
 #Define TSS adjustments for obs data
@@ -455,10 +455,10 @@ def graph_Pr_RO(in_dic, x_lab, y_lab, title, out_name, comp_type, col_lab1, col_
     fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/{}_{}.png'.format(out_name,comp_type)
     fig.savefig(fig_path)
 
-RO_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Runoff"
-RR_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Monthly Runoff Ratios"
-TSS_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Soil Detachment"
+RO_title = "Uncalibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Runoff"
+RR_title = "Uncalibrated WEPP Outputs vs Discovery Farms Data: \n Monthly Runoff Ratios"
+TSS_title = "Uncalibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Soil Detachment"
 
-graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Runoff (mm)', RO_title, 'Monthly', 'avgRO', 'obs_RO', 'mod_RO', 'NSE_RO', 'PBIAS_RO')
-graph_Pr_RO(avg_vals_dic, 'Month', 'Runoff Ratio', RR_title, 'Monthly', 'avgRR', 'obs_RR', 'mod_RR', 'NSE_RR', 'PBIAS_RR')
-graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Soil Detachment (tons/ha)', TSS_title, 'Monthly', 'avgTSS', 'obs_TSS', 'mod_TSS', 'NSE_TSS', 'PBIAS_TSS')
+graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Runoff (mm)', RO_title, 'Monthly', 'avgRO_uncal', 'obs_RO', 'mod_RO', 'NSE_RO', 'PBIAS_RO')
+graph_Pr_RO(avg_vals_dic, 'Month', 'Runoff Ratio', RR_title, 'Monthly', 'avgRR_uncal', 'obs_RR', 'mod_RR', 'NSE_RR', 'PBIAS_RR')
+graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Soil Detachment (tons/ha)', TSS_title, 'Monthly', 'avgTSS_uncal', 'obs_TSS', 'mod_TSS', 'NSE_TSS', 'PBIAS_TSS')
