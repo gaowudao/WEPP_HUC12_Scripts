@@ -1,0 +1,62 @@
+import pandas as pd
+import os,shutil
+
+
+def move_copy_man(edited_dir, run_dir):
+    '''
+    Copies a fully calibrated .cli file to a run directory for each hillslope ID
+    '''
+
+    scen_files = []
+
+    #select files without calibrated precip stdevs or skews
+    for file in os.listdir(edited_dir):
+        if file.startswith('p'):
+            scen_files.append(file)
+
+
+    #loop through hillslope IDs
+    for scen_file in scen_files:
+
+        # Create a new file path for the scenario file
+        new_file = str(run_dir + scen_file)
+
+        # Send cli file to hillslope directory
+        shutil.copy(scen_file, new_file)
+    
+
+#prep loop and function inputs
+wshed_lst = ['BE1','DO1','GO1','RO1','ST1']
+scen_lst = ['CC','Comb','Per']
+mod_lst = ['B3','B4','L3','L4']
+period_lst = ['59','99']
+
+#loop through watersheds and cligen model locations
+for wshed in zip(wshed_lst):
+
+    #loop through WEPP management scenarios
+    for scen in scen_lst:
+
+        #select folder with future management files corresponding to scen 
+        if scen == 'CC':
+            scen_folder = 'Future_CC'
+
+        if scen == 'Comb':
+            scen_folder = 'Combined'
+
+        if scen == 'Per':
+            scen_folder = 'Perennial'
+
+
+        #loop through cligen model IDs
+        for mod in mod_lst:
+
+            #loop through future periods
+            for period in period_lst:
+
+                #define directory to cligen .cli files and WEPP hillslope run directory
+                scen_file_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Management_Edits/{}/'.format(wshed,scen_folder)
+                run_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/{}_{}/wepp/runs/'.format(wshed,scen,mod,period)
+                
+                #run move_copy_man
+                move_copy_man(scen_file_dir,run_dir)

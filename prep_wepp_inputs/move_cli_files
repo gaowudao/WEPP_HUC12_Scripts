@@ -2,43 +2,65 @@ import pandas as pd
 import os,shutil
 
 
-def move_copy_cli(cli_dir, run_dir,):
+def move_copy_cli(cli_dir, run_dir, mod_ID, loc_ID, period):
     '''
     Copies a fully calibrated .cli file to a run directory for each hillslope ID
     '''
 
-    #get cli file from cli_dir
-    for file in os.listdir(cli_dir):
-        if file.endswith('.cli'):
-            cli_file = str(cli_dir + file)
+    #select files without calibrated precip stdevs or skews
+    cli_file = os.path.join(cli_dir, '{}_{}_{}_{}.cli'.format(wshed, mod_ID, loc_ID, period))
 
-
-
-    hill_IDs = []
-
+    
     #get hillslope IDs as list of strings
+    hill_IDs = []
     for file in os.listdir(run_dir):
+        #only need one ID per hillslope, so only select one file type
         if file.endswith('.man'):
             hill_IDs.append(file[:-4])
 
-    print(hill_IDs)
 
     #loop through hillslope IDs
-
     for ID in hill_IDs:
 
-        # Create new file name
+        # Create new cli file name
         hill_cli = str(run_dir + str(ID) + '.cli')
 
         # Send cli file to hillslope directory
         shutil.copy(cli_file, hill_cli)
     
 
+#prep loop and function inputs
+wshed_lst = ['BE1','DO1','GO1','RO1','ST1']
+BCCA_loc_IDs = [2,2,1,2,4]
+LOCA_loc_IDs = [8,3,3,7,3]
+scen_lst = ['CC','Comb','CT','NC','Per']
+mod_lst = ['B3','B4','L3','L4']
+period_lst = ['59','99']
 
-wshed = 'ST1'
-scenario = 'Base'
+#loop through watersheds and cligen model locations
+for wshed, LOCA_loc, BCCA_loc in zip(wshed_lst, LOCA_loc_IDs, BCCA_loc_IDs):
+    #loop through WEPP management scenarios
+    for scen in scen_lst:
+        #loop through cligen model IDs
+        for mod in mod_lst:
+            #loop through future periods
+            for period in period_lst:
 
-cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/PAR/Obs/obs_6519/'.format(wshed)
-run_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/Obs/wepp/runs/'.format(wshed,scenario)
+                #define method as LOCA or BCCA depending on model in iteration
+                if mod.startswith('L'):
+                    method = 'LOCA'
 
-move_copy_cli(cli_dir,run_dir)
+                if mod.startswith('B'):
+                    method = 'BCCA'
+
+                #define directory to cligen .cli files and WEPP hillslope run directory
+                cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/PAR/{}/'.format(wshed,method)
+                run_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/{}_{}/wepp/runs/'.format(wshed,scen,mod,period)
+                
+                #run move_copy_cli with LOCA location ID if mod is LOCA
+                if mod.startswith('L'):
+                    move_copy_cli(cli_dir,run_dir,mod, LOCA_loc, period)
+                
+                #run move_copy_cli with BCCA location ID if mod is BCCA
+                if mod.startswith('B'):
+                    move_copy_cli(cli_dir,run_dir,mod, BCCA_loc, period)
