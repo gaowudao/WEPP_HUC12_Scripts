@@ -1,0 +1,64 @@
+import pandas as pd 
+import numpy as np 
+import os
+
+
+def future_cal_stdevs_skews(top_dir,obs_dir,mod_ID, loc_ID):
+    '''
+    '''
+
+    #select files without calibrated precip stdevs or skews
+    top_obs = os.path.join(obs_dir, '{}_{}_{}_19.top'.format(wshed, mod_ID, loc_ID))
+    top_19 = os.path.join(top_dir, '{}_{}_{}_19.top'.format(wshed, mod_ID, loc_ID))
+    top_59 = os.path.join(top_dir, '{}_{}_{}_59.top'.format(wshed, mod_ID, loc_ID))
+    top_99 = os.path.join(top_dir, '{}_{}_{}_99.top'.format(wshed, mod_ID, loc_ID))
+
+    def top_to_dic(top_file):
+        '''
+        Assigns data in .top file rows to dataframes
+        '''
+        # Read in .top file
+        top_data = pd.read_csv(top_file, skiprows = 3, sep = '\s+', header=None, engine = 'python')
+        Months = [1,2,3,4,5,6,7,8,9,10,11,12]
+
+        #Create dataframe of monthly precip st dev values
+        stdev_vals = top_data.drop([0,1], axis=1)
+        stdev_df = pd.DataFrame({'stdev_P' : stdev_vals.loc['S'], 'Months':Months})
+        stdev_df.set_index('Months', inplace =True)
+
+        #Create dataframe of monthly precip skew values
+        skew_vals = top_data.drop([0,13], axis=1)
+        skewp_df = pd.DataFrame({'skew_P' : skew_vals.loc['SKEW'], 'Months':Months})
+        skewp_df.set_index('Months', inplace =True)
+        #Do not let skew precip values be greater than 4.5 since the Pearson III model is not robust enough to handle
+        #skews greater than that
+        skewp_df['skew_P'] = skewp_df['skew_P'].astype(float).clip(0,4.3)
+
+        stats_df = pd.DataFrame({'stdev_P':stdev_df['stdev_P'], 'skew_P':skewp_df['skew_P']})
+
+        return stats_df
+
+    stats_obs = top_to_dic(top_obs)
+    stats_19 = top_to_dic(top_19)
+    stats_59 = top_to_dic(top_59)
+    stats_99 = top_to_dic(top_99)
+
+    cal_stats_59 = (stats_59 - stats_19) + stats_obs
+    cal_stats_99 = (stats_99 - stats_19) + stats_obs
+
+
+
+
+
+wshed = 'BE1'
+
+wsheds = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
+BCCA_loc_IDs = []
+LOCA_loc_IDs = []
+methods = ['BCCA', 'BCCA', 'LOCA', 'LOCA']
+mod_IDs = ['B3', 'B4', 'L3', 'L4']
+    
+obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/GDS/Obs/obs_6519/'.format(wshed)
+top_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/GDS/{}/'.format(wshed,'BCCA')
+
+future_cal_stdevs_skews(top_dir,obs_dir, 'B3', '2')

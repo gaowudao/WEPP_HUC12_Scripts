@@ -1,4 +1,4 @@
-def analyze_cli(obs_dir, wshed, data_len, top_path, clim_mod, loc):
+def analyze_cli(obs_dir, wshed, data_len, stdev_adjs, top_path, clim_mod, loc):
     from matplotlib.pyplot import fill
     import pandas as pd
     import numpy as np
@@ -17,7 +17,7 @@ def analyze_cli(obs_dir, wshed, data_len, top_path, clim_mod, loc):
     skewps = []
 
     #loop through month and get standard deviation and skew coeff for precip
-    for month in months:
+    for month,stdev_adj in zip(months,stdev_adjs):
         #selected data that only corresponds to 'month'
         data_for_month = daily_mndnr_data[daily_mndnr_data['Month'] == month]
 
@@ -25,14 +25,15 @@ def analyze_cli(obs_dir, wshed, data_len, top_path, clim_mod, loc):
 
         pr_for_month.dropna(inplace = True)
 
-        stdev = statistics.pstdev(pr_for_month)
+        stdev = float(statistics.pstdev(pr_for_month))
+        stdev_adjusted = stdev + stdev_adj
         skewp = pr_for_month.skew(axis = 0, skipna = True)
 
         if skewp > 4.3:
             skewp = 4.3
 
         skewps.append(skewp)
-        stdevs.append(stdev)
+        stdevs.append(stdev_adjusted)
 
     print(skewps)
     print(stdevs)
@@ -74,7 +75,15 @@ def analyze_cli(obs_dir, wshed, data_len, top_path, clim_mod, loc):
         file.close()
 
 
-obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/obs_data/'
-top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/DO1/GDS/Obs/obs_sub/'
+BE1_stdev_adjs = [0, 0, 0, 0.07, 0.08, 0, 0, 0, 0, 0.08, 0, 0]
+DO1_stdev_adjs = [0, 0, 0, 0.04, -0.18, 0.1, 0.47, 0, 0, 0, 0, 0]
+GO1_stdev_adjs = [0, 0, 0, 0.13, -0.07, 0, -0.16, 0, 0, 0, 0, 0]
+RO1_stdev_adjs = [0, 0, 0, -0.07, 0.04, 0.03, 0.23, -0.16, -0.05, 0.07, 0, 0]
+ST1_stdev_adjs = [0, 0, 0, -0.05, 0.17, 0.12, 0, 0.18, 0, 0, 0, 0]
 
-analyze_cli(obs_dir, 'DO1', '_sub', top_path, 'B3', '2')
+wshed = 'ST1'
+
+obs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/obs_data/'.format(wshed)
+top_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/GDS/Obs/obs_6519/'.format(wshed)
+
+analyze_cli(obs_dir, wshed, '', ST1_stdev_adjs, top_path, 'B3', '4')

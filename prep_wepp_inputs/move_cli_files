@@ -1,0 +1,44 @@
+import pandas as pd
+import os,shutil
+
+
+def move_copy_cli(cli_dir, run_dir,):
+    '''
+    Copies a fully calibrated .cli file to a run directory for each hillslope ID
+    '''
+
+    #get cli file from cli_dir
+    for file in os.listdir(cli_dir):
+        if file.endswith('.cli'):
+            cli_file = str(cli_dir + file)
+
+
+
+    hill_IDs = []
+
+    #get hillslope IDs as list of strings
+    for file in os.listdir(run_dir):
+        if file.endswith('.man'):
+            hill_IDs.append(file[:-4])
+
+    print(hill_IDs)
+
+    #loop through hillslope IDs
+
+    for ID in hill_IDs:
+
+        # Create new file name
+        hill_cli = str(run_dir + str(ID) + '.cli')
+
+        # Send cli file to hillslope directory
+        shutil.copy(cli_file, hill_cli)
+    
+
+
+wshed = 'ST1'
+scenario = 'Base'
+
+cli_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/PAR/Obs/obs_6519/'.format(wshed)
+run_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/Obs/wepp/runs/'.format(wshed,scenario)
+
+move_copy_cli(cli_dir,run_dir)
