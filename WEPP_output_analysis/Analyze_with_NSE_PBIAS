@@ -208,15 +208,15 @@ def NSE_PBIAS_Analysis(obs_dir, wshed, cli_dir, wepp_out_dir, hillID, mod_yrs, T
         ####get average runoff:precip ratio by month totals ###
 
         #Avg total monthly Pr
-        avg_pr_obs = obs_pr.groupby('Month')['filled_pr'].sum() / len(obs_rot)
+        avg_pr_obs = obs_pr.groupby('Month')['filled_pr'].sum() / (len(obs_rot)/ 2)
         avg_pr_mod = cli_df_sel.groupby('Month')['cli_pr'].sum() / 55
 
         #Avg total monthly RO
-        avg_RO_obs = obs_RO.groupby('Month')['RO'].sum() / len(obs_rot)
+        avg_RO_obs = obs_RO.groupby('Month')['RO'].sum() / (len(obs_rot) / 2)
         avg_RO_mod = mod_df.groupby('Month')['RO'].sum() / 55
 
         #Avg total monthly TSS
-        avg_TSS_obs = obs_RO.groupby('Month')['TSS'].sum() / len(obs_rot)
+        avg_TSS_obs = obs_RO.groupby('Month')['TSS'].sum() / (len(obs_rot) / 2)
         avg_TSS_mod = mod_df.groupby('Month')['TSS'].sum() / 55
 
         #Runoff ratio
@@ -261,7 +261,7 @@ def NSE_PBIAS_Analysis(obs_dir, wshed, cli_dir, wepp_out_dir, hillID, mod_yrs, T
 
         return mean_vals, nse_pbias_df
 
-    avg_vals, nse_pbias_vals = compare_mod_obs(obs_df, comb_df_sel)
+    avg_vals, nse_pbias_vals = compare_mod_obs(obs_RO_cal, obs_pr_cal)
 
     avg_vals_dic[wshed] = avg_vals
     nse_pbias_dic[wshed] = nse_pbias_vals
@@ -271,11 +271,11 @@ def NSE_PBIAS_Analysis(obs_dir, wshed, cli_dir, wepp_out_dir, hillID, mod_yrs, T
 #of years in each observed crop rotation (crop rot = simulation period)
 wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
 hillslopes = ['p221', 'p206', 'p66', 'p77', 'p154']
-ke_mods = ['No Ke Adj', 'No Ke Adj','No Ke Adj','No Ke Adj','No Ke Adj', '']
-mod_dir_lst = ['DF_Comp/Obs_full',\
-                'DF_Comp/Obs_full',\
-                'DF_Comp/Obs_full',\
-                'DF_Comp/Obs_full',\
+ke_mods = ['Ke x 3', 'Ke / 2','Ke x 3','Ke x 5','No Ke Adj', '']
+mod_dir_lst = ['DF_Comp3/Obs_full',\
+                'DF_Comp3/Obs_full',\
+                'DF_Comp3/Obs_full',\
+                'DF_Comp5/Obs_full',\
                 'DF_Comp/Obs_full']
 
 #Define TSS adjustments for obs data
@@ -455,10 +455,6 @@ def graph_Pr_RO(in_dic, x_lab, y_lab, title, out_name, comp_type, col_lab1, col_
     fig_path = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/Comparisons/{}_{}.png'.format(out_name,comp_type)
     fig.savefig(fig_path)
 
-RO_title = "Uncalibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Runoff"
-RR_title = "Uncalibrated WEPP Outputs vs Discovery Farms Data: \n Monthly Runoff Ratios"
-TSS_title = "Uncalibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Soil Detachment"
-
-graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Runoff (mm)', RO_title, 'Monthly', 'avgRO_uncal', 'obs_RO', 'mod_RO', 'NSE_RO', 'PBIAS_RO')
-graph_Pr_RO(avg_vals_dic, 'Month', 'Runoff Ratio', RR_title, 'Monthly', 'avgRR_uncal', 'obs_RR', 'mod_RR', 'NSE_RR', 'PBIAS_RR')
-graph_Pr_RO(avg_vals_dic, 'Month', 'Average Total Soil Detachment (tons/ha)', TSS_title, 'Monthly', 'avgTSS_uncal', 'obs_TSS', 'mod_TSS', 'NSE_TSS', 'PBIAS_TSS')
+RO_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Runoff"
+RR_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Monthly Runoff Ratios"
+TSS_title = "Calibrated WEPP Outputs vs Discovery Farms Data: \n Average Total Monthly Soil Detachment"

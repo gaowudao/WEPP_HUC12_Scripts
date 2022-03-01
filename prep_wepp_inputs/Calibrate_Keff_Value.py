@@ -47,16 +47,16 @@ def edit_Keff_val(scale_val,runs_dir):
             #write new lines
             file.writelines(lines)
 
-wshed_lst = ['BE1', 'DO1', 'GO1', 'RO1', 'ST1']
+wshed = 'BE1'
+scale_val = 3
+scen_lst = ['CC', 'Comb', 'CT', 'NC','Per']
+mod_labs = ['L3', 'L4','B3', 'B4']
+period_lst = ['59','99']
 
-for wshed in wshed_lst:
-    scen_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/DF_Comp10/'.format(wshed)
-    period = '_19'
-    mod_labs = ['L3', 'L4','B3', 'B4']
-
-    for mod in mod_labs:
-        runs_dir = str(scen_dir + mod + period + '/wepp/runs/')
-        edit_Keff_val(10, runs_dir)
+#Assign runs directory
+runs_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/Base/Obs/wepp/runs/'.format(wshed)
+#run edit_Keff_val for runs directory and scale value
+edit_Keff_val(scale_val, runs_dir)
 
 
 # In[ ]:

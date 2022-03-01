@@ -18,11 +18,14 @@ def move_copy_man(edited_dir, run_dir):
     #loop through hillslope IDs
     for scen_file in scen_files:
 
+        #create full path to scen_file
+        scen_file_path = str(edited_dir + scen_file)
+
         # Create a new file path for the scenario file
         new_file = str(run_dir + scen_file)
 
         # Send cli file to hillslope directory
-        shutil.copy(scen_file, new_file)
+        shutil.copy(scen_file_path, new_file)
     
 
 #prep loop and function inputs
@@ -32,7 +35,7 @@ mod_lst = ['B3','B4','L3','L4']
 period_lst = ['59','99']
 
 #loop through watersheds and cligen model locations
-for wshed in zip(wshed_lst):
+for wshed in wshed_lst:
 
     #loop through WEPP management scenarios
     for scen in scen_lst:
