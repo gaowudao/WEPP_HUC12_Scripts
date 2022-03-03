@@ -14,11 +14,13 @@ def run_wepp(wepppy_win_dir, scen_dir, model_labs):
         cli_scen_dir = str(scen_dir + mod_lab)
         os.system('python3 run_project.py {}'.format(cli_scen_dir))
 
-wshed_lst = ['BE1']
 wepppy_win_dir = 'C:/Users/Garner/Soil_Erosion_Project/wepppy-win-bootstrap-master/scripts'
-model_labs = ['B3_59/']
+wshed_lst = ['ST1']
+scen_lst = ['CC','Comb','CT','NC','Per']
+model_labs = ['B3_59/', 'B3_99/', 'B4_59/', 'B4_99/',\
+              'L3_59/', 'L3_99/', 'L4_59/', 'L4_99/']
 
 for wshed in wshed_lst:
-    HUC12_path = str('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/'.format(wshed))
-    scen_dir = str(HUC12_path + 'Runs/Comb/')
-    run_wepp(wepppy_win_dir, scen_dir, model_labs)
+    for scen in scen_lst:
+        scen_dir = str('C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/'.format(wshed,scen))
+        run_wepp(wepppy_win_dir, scen_dir, model_labs)

@@ -1,0 +1,16 @@
+import os
+
+wshed_lst = ['RO1','ST1']
+scen_lst = ['CC', 'Comb', 'CT', 'NC', 'Per']
+mod_labs = ['B3', 'B4', 'L3', 'L4']
+periods = ['59', '99']
+
+for wshed in wshed_lst:
+    for scen in scen_lst:
+        for mod in mod_labs:
+            for period in periods:
+
+                current_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/{}_{}/wepp/outputs'.format(wshed, scen, mod,period)
+                rename_dir = 'C:/Users/Garner/Soil_Erosion_Project/WEPP_PRWs/{}/Runs/{}/{}_{}/wepp/output'.format(wshed, scen, mod,period)
+
+                os.rename(current_dir, rename_dir)
