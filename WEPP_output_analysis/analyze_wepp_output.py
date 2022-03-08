@@ -4,7 +4,8 @@ from operator import index
 import pandas as pd
 import os
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 def analyze_soil_loss(wshed_lst,scen_lst,mod_lst,mod_names):
     '''
@@ -129,13 +130,30 @@ def analyze_soil_loss(wshed_lst,scen_lst,mod_lst,mod_names):
     ### Run prep_soil_loss_data function for all wshes, scenarios, and clim models ###
 
     #use to loop through months used for selecting the months corresponding to each season
-    season_start_months = [3]
-    season_end_months = [6]
-    season_names = ['Spring']
+    season_start_months = [3,5,8]
+    season_end_months = [6,9,12]
+    season_names = ['Spring','Summer', 'Fall']
 
-    for wshed in wshed_lst:
+    #Define x/y axis coordinates for each watershed plot
+    subx_vals = [0,1,2]
+    suby_vals = [0,1,2,3,4]
 
-        for season_start,season_end,season_name in zip(season_start_months,season_end_months,season_names):
+    #Set up a subplot for each watershed that contains plots for each watershed
+    fig, axes = plt.subplots(nrows = 3, ncols = 5, figsize = (30,22), sharex=True)
+
+    fig.text(0.2, 0.90, 'Blue Earth', ha='center')
+    fig.text(0.35, 0.90, 'Dodge', ha='center')
+    fig.text(0.51, 0.90, 'Goodhue', ha='center')
+    fig.text(0.67, 0.90, 'Rock', ha='center')
+    fig.text(0.83, 0.90, 'Sterns', ha='center')
+
+    fig.text(0.08, 0.77, 'Average Spring Soil Loss (tons/ha)', va='center', rotation='vertical')
+    fig.text(0.08, 0.51, 'Average Summer Soil Loss (tons/ha)', va='center', rotation='vertical')
+    fig.text(0.08, 0.24, 'Average Fall Soil Loss (tons/ha)', va='center', rotation='vertical')
+
+    for wshed,suby in zip(wshed_lst,suby_vals):
+
+        for season_start,season_end,season_name,subx in zip(season_start_months,season_end_months,season_names,subx_vals):
 
             #Only one baseline period, which does not have any scenarios or climate models. Only need to perform
             #function once per watershed
@@ -177,23 +195,45 @@ def analyze_soil_loss(wshed_lst,scen_lst,mod_lst,mod_names):
 
             print(season_name, output_df)
 
-            axes = output_df.plot.bar(width = 0.7, rot = 45,\
-                                      title = 'Spring',\
-                                      color = {'gfdl 4.5 2020-59':'Plum',\
-                                                'gfdl 4.5 2060-99':'DarkSlateBlue',\
-                                                'gfdl 6.0 2020-59':'SkyBlue',\
-                                                'gfdl 6.0 2060-99':'MediumBlue',\
-                                                'hadgem2 4.5 2020-59':'PaleGreen',\
-                                                'hadgem2 4.5 2060-99':'DarkGreen',\
-                                                'hadgem2 8.5 2020-59':'BurlyWood',\
-                                                'hadgem2 8.5 2060-99':'DarkGoldenrod'})
+            output_df.plot.bar(ax = axes[subx,suby],\
+                               width = 0.73,\
+                               rot = 45,\
+                               legend=False,\
+                               edgecolor='white',\
+                               color = {'gfdl 4.5 2020-59':'SkyBlue',\
+                                        'gfdl 4.5 2060-99':'Blue',\
+                                        'gfdl 6.0 2020-59':'Orange',\
+                                        'gfdl 6.0 2060-99':'Yellow',\
+                                        'hadgem2 4.5 2020-59':'DimGrey',\
+                                        'hadgem2 4.5 2060-99':'Silver',\
+                                        'hadgem2 8.5 2020-59':'Red',\
+                                        'hadgem2 8.5 2060-99':'LightSalmon'})
 
-            axes.legend(bbox_to_anchor=(1.0, 1.0))
-
-            axes.set_ylabel('Average Hillslope Soil Loss (tons/ha)')
 
 
-wshed_lst = ['BE1']
+            axes[subx, suby].axhline(y = obs_loss, color = 'Black')
+
+            axes[subx, suby].tick_params(labelrotation=45)
+
+
+        #Add title to grouping of subplots
+        fig.suptitle('Average Seasonal Soil Loss for WEPP Simulated HUC12 Watersheds\nwith Future Climate and Management Scenarios'.format(season_name), fontsize = 16)
+
+        #Set up figure legend items
+        B1 = mpatches.Patch(color='SkyBlue', label='gfdl 4.5 2020-59')
+        B2 = mpatches.Patch(color='Blue', label='gfdl 4.5 2060-99')
+        B3 = mpatches.Patch(color='Orange', label='gfdl 6.0 2020-59')
+        B4 = mpatches.Patch(color='Yellow', label='gfdl 6.0 2060-99')
+        Base = mpatches.Patch(color = 'Black', label = 'Baseline Period')
+        L1 = mpatches.Patch(color='DimGrey', label='hadgem2 4.5 2020-59')
+        L2 = mpatches.Patch(color='Silver', label='hadgem2 4.5 2060-99')
+        L3 = mpatches.Patch(color='Red', label='hadgem2 8.5 2020-59')
+        L4 = mpatches.Patch(color='LightSalmon', label='hadgem2 8.5 2060-99')
+
+        fig.legend(handles=[B1,B2,B3,B4,Base,L1,L2,L3,L4], mode = "expand", ncol= 2,prop={'size': 11}, bbox_to_anchor = [0.53,0.1])
+
+
+wshed_lst = ['BE1','DO1','GO1','RO1','ST1']
 scen_lst = ['NC', 'Comb', 'CT', 'CC', 'Per']
 
 mod_lst = ['B3_59', 'B3_99', 'B4_59', 'B4_99',\
