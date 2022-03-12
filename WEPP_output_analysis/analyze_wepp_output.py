@@ -137,6 +137,7 @@ def analyze_soil_loss(wshed_lst,scen_lst,mod_lst,mod_names):
     #Define x/y axis coordinates for each watershed plot
     subx_vals = [0,1,2]
     suby_vals = [0,1,2,3,4]
+    ymax_vals = [1.2,5.4,1.2]
 
     #Set up a subplot for each watershed that contains plots for each watershed
     fig, axes = plt.subplots(nrows = 3, ncols = 5, figsize = (30,22), sharex=True)
@@ -153,7 +154,7 @@ def analyze_soil_loss(wshed_lst,scen_lst,mod_lst,mod_names):
 
     for wshed,suby in zip(wshed_lst,suby_vals):
 
-        for season_start,season_end,season_name,subx in zip(season_start_months,season_end_months,season_names,subx_vals):
+        for season_start,season_end,season_name,subx,ymax in zip(season_start_months,season_end_months,season_names,subx_vals,ymax_vals):
 
             #Only one baseline period, which does not have any scenarios or climate models. Only need to perform
             #function once per watershed
@@ -215,6 +216,8 @@ def analyze_soil_loss(wshed_lst,scen_lst,mod_lst,mod_names):
 
             axes[subx, suby].tick_params(labelrotation=45)
 
+            axes[subx,suby].set_ylim(bottom = 0, top = ymax)
+
 
         #Add title to grouping of subplots
         fig.suptitle('Average Seasonal Soil Loss for WEPP Simulated HUC12 Watersheds\nwith Future Climate and Management Scenarios'.format(season_name), fontsize = 16)
@@ -230,7 +233,7 @@ def analyze_soil_loss(wshed_lst,scen_lst,mod_lst,mod_names):
         L3 = mpatches.Patch(color='Red', label='hadgem2 8.5 2020-59')
         L4 = mpatches.Patch(color='LightSalmon', label='hadgem2 8.5 2060-99')
 
-        fig.legend(handles=[B1,B2,B3,B4,Base,L1,L2,L3,L4], mode = "expand", ncol= 2,prop={'size': 11}, bbox_to_anchor = [0.53,0.1])
+        fig.legend(handles=[B1,B2,B3,B4,Base,L1,L2,L3,L4], mode = "expand", ncol= 2,prop={'size': 11}, bbox_to_anchor = [0.53,0.05])
 
 
 wshed_lst = ['BE1','DO1','GO1','RO1','ST1']
