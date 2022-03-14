@@ -129,7 +129,7 @@ def analyze_soil_loss(wshed,mod_lst,ymin,ymax):
     # % Adoption rates for each management scenario 
     adopt_rates = [[1, 10, 20],\
                    [0, 50, 100],\
-                   [0,40,60,80]]
+                   [0,30,50,70]]
 
     scen_names = ['Cover Croping',\
                   'Conservation Tillage',\
@@ -211,7 +211,7 @@ def analyze_soil_loss(wshed,mod_lst,ymin,ymax):
 
         colors = ['cornflowerblue', 'mediumblue',\
                  'Gold', 'goldenrod',\
-                 'mediumseagreen', 'green',\
+                 'mediumseagreen', 'darkgreen',\
                  'salmon', 'Red',\
                  'black']
 
@@ -243,7 +243,7 @@ def analyze_soil_loss(wshed,mod_lst,ymin,ymax):
     handles, labels = axes[1].get_legend_handles_labels()
     fig.legend(handles, labels, bbox_to_anchor = [1.05,0.92],fontsize=16)
 
-    fig.suptitle('Average WEPP Growing Season Soil Loss for HUC12 Watershed in Goodhue County, MN\nwith Varying Management Scenarios and Future Climates',\
+    fig.suptitle('Average WEPP Growing Season Soil Loss for HUC12 Watershed in Stearns County, MN\nwith Varying Management Scenarios and Future Climates',\
                  fontsize = 21)
 
 
@@ -256,8 +256,11 @@ S_ymin = 0.25 #ST1
 S_ymax = 2.5 #ST1
 
 G_ymin = 1.5 #GO1
-G_ymax = 12 #GO1
+G_ymax = 11 #GO1
 
-analyze_soil_loss('GO1', mod_lst,G_ymin,G_ymax)
+D_ymin = 1.5 #GO1
+D_ymax = 8 #GO1
+
+analyze_soil_loss('ST1', mod_lst,S_ymin,S_ymax)
 
 #%%
